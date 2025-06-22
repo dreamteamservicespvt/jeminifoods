@@ -59,7 +59,7 @@ interface PreOrder {
 
 const PreOrders = () => {
   // UPI Payment details
-  const upiId = "9392521026@axl"; // UPI ID
+  const upiId = "9885321957@ybl"; // UPI ID
   const upiName = "Jemini Foods";
   const upiCurrency = "INR";
 

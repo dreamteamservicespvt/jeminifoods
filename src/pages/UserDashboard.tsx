@@ -3,6 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '../lib/firebase';
+import { signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -12,10 +17,10 @@ import {
   CreditCard, Gift, Bookmark, History, ArrowRight,
   MessageSquare, Headphones, HelpCircle, Users
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar } from '@/components/ui/avatar';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Avatar } from '../components/ui/avatar';
 
 interface UserProfile {
   id: string;
@@ -636,8 +641,7 @@ const UserDashboard = () => {
                   </Button>
                 </div>
               )}
-            </Card>          </motion.div>
-        </motion.div>
+            </Card>          </motion.div>        </motion.div>
       </div>
     </div>
   );
