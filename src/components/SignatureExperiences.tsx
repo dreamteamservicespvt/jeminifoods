@@ -118,7 +118,7 @@ const SignatureExperiences: React.FC = () => {
 					</h2>
 					<div className="w-40 h-0.5 bg-gradient-to-r from-transparent via-amber-500 to-transparent mx-auto mb-6"></div>
 					<p className="text-xl text-cream/80 max-w-3xl mx-auto">
-						Discover what makes Reeves a destination for discerning diners
+						Discover what makes Jemini a destination for discerning diners
 						worldwide
 					</p>
 				</motion.div>
