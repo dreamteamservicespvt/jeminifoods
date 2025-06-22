@@ -345,41 +345,101 @@ const Gallery = () => {
   const displayItems = (galleryItems.length > 0 || isLoading) ? galleryItems : fallbackImages;
 
   return (
-    <div className="min-h-screen bg-charcoal pt-20 overflow-x-hidden">
-      {/* Hero Section with Professional Gallery Image */}
-      <div className="relative h-[40vh] md:h-[50vh] overflow-hidden">
+    <div className="min-h-screen bg-charcoal pt-20 overflow-x-hidden">      {/* Advanced Hero Section with Parallax and Animation */}
+      <div className="relative h-[50vh] md:h-[60vh] overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2000&q=80"
-            alt="Fine dining experience gallery"
-            className="w-full h-full object-cover brightness-125 contrast-105"
-          />
-          {/* Reduced darkness of overlay */}
-          <div className="absolute inset-0 bg-black/30"></div>
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-charcoal/40 to-charcoal"></div>
+          <motion.div 
+            initial={{ scale: 1.2 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 5 }}
+            className="w-full h-full"
+          >
+            <img 
+              src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2000&q=80"
+              alt="Fine dining experience gallery"
+              className="w-full h-full object-cover brightness-125 contrast-105"
+            />
+          </motion.div>
+          
+          {/* Dynamic lighting effects */}
+          <motion.div 
+            initial={{ opacity: 0.8 }}
+            animate={{ opacity: 0.6 }}
+            transition={{ duration: 3, repeat: Infinity, repeatType: "reverse" }}
+            className="absolute inset-0 bg-gradient-to-r from-amber-900/30 via-transparent to-amber-900/30"
+          ></motion.div>
+          
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-charcoal/40 to-charcoal"></div>
+          
+          {/* Floating particles */}
+          <div className="absolute inset-0 opacity-30">
+            {Array.from({ length: 20 }).map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-2 h-2 rounded-full bg-amber-400"
+                initial={{ 
+                  x: `${Math.random() * 100}%`, 
+                  y: `${Math.random() * 100}%`,
+                  opacity: 0 
+                }}
+                animate={{ 
+                  y: [`${Math.random() * 100}%`, `${Math.random() * 100}%`],
+                  opacity: [0, 0.8, 0]
+                }}
+                transition={{ 
+                  duration: Math.random() * 10 + 10,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+            ))}
+          </div>
         </div>
         
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center px-6 max-w-4xl"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.2 }}
+            className="text-center px-6 max-w-4xl relative z-10"
           >
-            <h1 className="text-6xl md:text-7xl font-serif font-bold text-amber-400 mb-6">
-              Gallery
-            </h1>
-            <div className="w-32 h-0.5 bg-amber-400/70 mx-auto mb-6"></div>
-            <p className="text-xl text-cream/90 max-w-3xl mx-auto leading-relaxed">
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+              className="mb-8"
+            >
+              <motion.h1 
+                className="text-6xl md:text-7xl font-serif font-bold text-amber-400 mb-4"
+                initial={{ y: 30, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.8 }}
+              >
+                Culinary Gallery
+              </motion.h1>
+              
+              <motion.div 
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ delay: 0.7, duration: 0.8 }}
+                className="w-48 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent mx-auto mb-6"
+              ></motion.div>
+            </motion.div>
+            
+            <motion.p 
+              className="text-xl text-cream/90 max-w-3xl mx-auto leading-relaxed backdrop-blur-sm bg-black/10 p-4 rounded-lg"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.9, duration: 0.8 }}
+            >
               Step into our world of culinary artistry and elegant ambiance.
               Each image tells a story of passion, precision, and the pursuit of perfection.
-            </p>
+            </motion.p>
           </motion.div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 py-12 -mt-10">
-        {/* Filter Controls */}
+      <div className="container mx-auto px-4 sm:px-6 py-12 -mt-10">        {/* Filter Controls */}
         <div className="bg-black/30 backdrop-blur-sm border border-amber-600/20 rounded-lg p-4 mb-8">
           <div className="flex flex-col sm:flex-row gap-4">
             {/* Search */}
@@ -393,7 +453,7 @@ const Gallery = () => {
             </div>
             
             {/* Sort Controls */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant={filters.sortBy === 'recent' ? 'default' : 'outline'}
                 size="sm"
@@ -448,10 +508,9 @@ const Gallery = () => {
                 Reset
               </Button>
             </div>
-          </div>
-          
+          </div>          
           {/* Category Filters */}
-          <div className="flex flex-wrap gap-2 mt-4">
+          <div className="flex flex-wrap gap-2 mt-4 overflow-x-auto pb-1">
             {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
               <Badge
                 key={key}

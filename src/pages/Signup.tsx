@@ -97,15 +97,16 @@ const Signup = () => {
     try {
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
-      
-      // Create user profile in Firestore
+        // Create user profile in Firestore with appropriate role
+      const isAdmin = userCredential.user.email === 'admin@jeminifoods.com';
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         fullName: userCredential.user.displayName || '',
         email: userCredential.user.email || '',
         phone: '',
         profileImage: userCredential.user.photoURL || null,
         createdAt: serverTimestamp(),
-        provider: 'google'
+        provider: 'google',
+        role: isAdmin ? 'admin' : 'user'
       });
       
       setSuccess(true);
@@ -140,15 +141,16 @@ const Signup = () => {
     try {
       // Create Firebase user
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      
-      // Create user profile in Firestore
+        // Create user profile in Firestore with appropriate role
+      const isAdmin = data.email === 'admin@jeminifoods.com';
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         fullName: data.fullName,
         email: data.email,
         phone: data.phone,
         profileImage: null,
         createdAt: serverTimestamp(),
-        provider: 'email'
+        provider: 'email',
+        role: isAdmin ? 'admin' : 'user'
       });
       
       setSuccess(true);

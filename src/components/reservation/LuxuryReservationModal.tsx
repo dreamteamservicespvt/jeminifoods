@@ -447,618 +447,635 @@ const LuxuryReservationModal: React.FC<LuxuryReservationModalProps> = ({ isOpen,
           {/* Main modal container */}
           <motion.div
             ref={modalRef}
-            initial={{ scale: 0.9, y: 20, opacity: 0 }}
-            animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.9, y: 20, opacity: 0 }}
-            transition={{ 
-              type: "spring", 
-              damping: 30, 
-              stiffness: 300,
-              mass: 0.8
-            }}
-            className="relative z-20 w-full max-w-4xl bg-gradient-to-br from-charcoal/90 to-black/95 backdrop-blur-xl border border-amber-600/30 rounded-2xl shadow-2xl overflow-hidden"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.4 }}              className="bg-charcoal/95 backdrop-blur-lg relative w-full max-w-3xl max-h-[90vh] md:max-h-[85vh] overflow-y-auto rounded-lg border border-amber-600/30 shadow-2xl shadow-black/50 mx-4"
           >
-            {/* Modal header */}
-            <div className="relative p-8 text-center border-b border-amber-600/20">
-              <motion.h2 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-4xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-amber-600"
-              >
-                Reserve Your Table
-              </motion.h2>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-                className="text-cream/80 mt-2 max-w-2xl mx-auto"
-              >
-                Secure your place for an unforgettable culinary journey
-              </motion.p>
-            </div>
-            
-            {/* Progress indicator */}
-            {!isSubmitted && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="px-8 pt-6"
-              >
-                <div className="flex justify-between mb-2 text-xs">
-                  <span className={currentStep >= 1 ? 'text-amber-400' : 'text-cream/50'}>
-                    Booking Details
-                  </span>
-                  <span className={currentStep >= 2 ? 'text-amber-400' : 'text-cream/50'}>
-                    Preferences
-                  </span>
-                  <span className={currentStep >= 3 ? 'text-amber-400' : 'text-cream/50'}>
-                    Your Information
-                  </span>
-                  <span className={currentStep >= 4 ? 'text-amber-400' : 'text-cream/50'}>
-                    Confirmation
-                  </span>
-                </div>
-                <Progress value={progress} className="h-1.5 bg-amber-900/30" />
-              </motion.div>
-            )}
-            
-            {/* Form content */}
-            <div className="p-8">
-              <AnimatePresence mode="wait">
-                {/* Step 1: Date, Time, Guests */}
-                {currentStep === 1 && (
-                  <motion.div
-                    key="step1"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className={cn("space-y-8", animateError && "animate-shake")}
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="absolute right-5 top-5 text-cream hover:text-amber-400 transition-colors z-10"
+              aria-label="Close reservation modal"
+            >
+              <X size={24} />
+            </button>
+
+            {/* Luxury Ambience Toggle */}
+            <button
+              onClick={toggleAmbientSound}
+              className="absolute right-16 top-5 text-cream hover:text-amber-400 transition-colors z-10"
+              aria-label={ambientSound ? "Turn off ambient sound" : "Turn on ambient sound"}
+            >
+              {ambientSound ? <Volume2 size={20} /> : <Volume size={20} />}
+            </button>
+
+            <audio 
+              ref={audioRef} 
+              src="/sounds/restaurant-ambience.mp3" 
+              loop
+            />
+
+            {/* Modal Body with gradient background */}
+            <motion.div
+              className="relative pb-8"
+            >
+              <div className="absolute inset-0 bg-gradient-to-b from-amber-900/20 via-transparent to-transparent pointer-events-none"></div>
+              
+              {/* Luxury accent elements */}
+              <div className="absolute top-0 left-0 h-32 w-32 bg-gradient-to-br from-amber-400/10 to-transparent rounded-br-full pointer-events-none"></div>
+              <div className="absolute top-0 right-0 h-32 w-32 bg-gradient-to-bl from-amber-400/10 to-transparent rounded-bl-full pointer-events-none"></div>
+                <div className="px-5 sm:px-8 md:px-12 pt-12 pb-4">
+                {/* Header */}
+                <div className="text-center mb-8">
+                  <motion.h2 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="font-serif text-2xl md:text-3xl lg:text-4xl font-bold text-amber-400 mb-2"
                   >
-                    {/* Date selection */}
-                    <div>
-                      <h3 className="text-xl font-serif font-bold text-amber-400 mb-4 flex items-center gap-2">
-                        <Calendar className="text-amber-400" size={20} />
-                        Select Your Date
-                      </h3>
-                      
-                      <div className="overflow-x-auto pb-4 hide-scrollbar">
-                        <div className="flex gap-2 min-w-max">
-                          {availableDates.map((date, index) => {
-                            const isToday = isSameDay(date, new Date());
-                            const isSelected = selectedDate && isSameDay(date, selectedDate);
-                            
-                            return (
+                    Reserve Your Experience
+                  </motion.h2>
+                  
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scaleX: 0 }}
+                    animate={{ opacity: 1, y: 0, scaleX: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="w-32 h-0.5 bg-gradient-to-r from-amber-600/60 via-amber-400 to-amber-600/60 mx-auto mb-4"
+                  ></motion.div>
+                  
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.9 }}
+                    transition={{ delay: 0.4 }}
+                    className="text-cream/90 text-sm md:text-base max-w-xl mx-auto"
+                  >
+                    Secure your table at our exclusive venue. Enjoy personalized service and exquisite cuisine for a memorable dining experience.
+                  </motion.p>
+                </div>
+                
+                {/* Progress indicator */}
+                <div className="mb-8 px-0 md:px-12">
+                  <div className="flex justify-between mb-2 text-xs text-cream/70">
+                    <span>Reservation Details</span>
+                    <span>Personal Information</span>
+                    <span>Confirmation</span>
+                  </div>
+                  <Progress value={progress} className="h-1.5 bg-amber-900/30" />
+                </div>
+                
+                {/* Form content */}
+                <div className="space-y-8">
+                  <AnimatePresence mode="wait">
+                    {/* Step 1: Date, Time, Guests */}
+                    {currentStep === 1 && (
+                      <motion.div
+                        key="step1"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className={cn("space-y-8", animateError && "animate-shake")}
+                      >
+                        {/* Date selection */}
+                        <div>
+                          <h3 className="text-xl font-serif font-bold text-amber-400 mb-4 flex items-center gap-2">
+                            <Calendar className="text-amber-400" size={20} />
+                            Select Your Date
+                          </h3>
+                          
+                          <div className="overflow-x-auto pb-4 hide-scrollbar">
+                            <div className="flex gap-2 min-w-max">
+                              {availableDates.map((date, index) => {
+                                const isToday = isSameDay(date, new Date());
+                                const isSelected = selectedDate && isSameDay(date, selectedDate);
+                                
+                                return (
+                                  <motion.button
+                                    key={index}
+                                    type="button"
+                                    whileHover={{ y: -5 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleDateSelect(date)}
+                                    className={`flex flex-col items-center p-4 rounded-lg transition-all ${
+                                      isSelected
+                                        ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-black shadow-lg shadow-amber-700/30'
+                                        : 'bg-black/30 border border-amber-600/20 hover:border-amber-400/40 text-cream'
+                                    }`}
+                                  >
+                                    <span className="text-xs font-medium mb-1">
+                                      {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                                    </span>
+                                    <span className={`text-2xl font-bold ${isToday && !isSelected ? 'text-amber-400' : ''}`}>
+                                      {date.getDate()}
+                                    </span>
+                                    <span className="text-xs opacity-80">
+                                      {date.toLocaleDateString('en-US', { month: 'short' })}
+                                    </span>
+                                  </motion.button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          
+                          {validationErrors.date && (
+                            <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.date}</p>
+                          )}
+                        </div>
+                        
+                        {/* Time selection */}
+                        <div>
+                          <h3 className="text-xl font-serif font-bold text-amber-400 mb-4 flex items-center gap-2">
+                            <Clock className="text-amber-400" size={20} />
+                            Select Time
+                          </h3>
+                          
+                          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 gap-3">
+                            {timeSlots.map(time => (
                               <motion.button
-                                key={index}
+                                key={time}
                                 type="button"
-                                whileHover={{ y: -5 }}
+                                whileHover={{ y: -3, backgroundColor: 'rgba(217, 119, 6, 0.2)' }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={() => handleDateSelect(date)}
-                                className={`flex flex-col items-center p-4 rounded-lg transition-all ${
-                                  isSelected
-                                    ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-black shadow-lg shadow-amber-700/30'
+                                onClick={() => handleTimeSelect(time)}
+                                onMouseEnter={() => setHoveredTime(time)}
+                                onMouseLeave={() => setHoveredTime(null)}
+                                className={`p-3 rounded-lg transition-all relative overflow-hidden ${
+                                  formData.time === time
+                                    ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-black font-medium shadow-lg shadow-amber-700/30'
                                     : 'bg-black/30 border border-amber-600/20 hover:border-amber-400/40 text-cream'
                                 }`}
                               >
-                                <span className="text-xs font-medium mb-1">
-                                  {date.toLocaleDateString('en-US', { weekday: 'short' })}
-                                </span>
-                                <span className={`text-2xl font-bold ${isToday && !isSelected ? 'text-amber-400' : ''}`}>
-                                  {date.getDate()}
-                                </span>
-                                <span className="text-xs opacity-80">
-                                  {date.toLocaleDateString('en-US', { month: 'short' })}
+                                {/* Ambient hover glow effect */}
+                                {hoveredTime === time && (
+                                  <motion.div
+                                    layoutId="timeHover"
+                                    className="absolute inset-0 bg-amber-600/10"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                  />
+                                )}
+                                <span className="relative z-10">
+                                  {time}
                                 </span>
                               </motion.button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      
-                      {validationErrors.date && (
-                        <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.date}</p>
-                      )}
-                    </div>
-                    
-                    {/* Time selection */}
-                    <div>
-                      <h3 className="text-xl font-serif font-bold text-amber-400 mb-4 flex items-center gap-2">
-                        <Clock className="text-amber-400" size={20} />
-                        Select Time
-                      </h3>
-                      
-                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 gap-3">
-                        {timeSlots.map(time => (
-                          <motion.button
-                            key={time}
-                            type="button"
-                            whileHover={{ y: -3, backgroundColor: 'rgba(217, 119, 6, 0.2)' }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleTimeSelect(time)}
-                            onMouseEnter={() => setHoveredTime(time)}
-                            onMouseLeave={() => setHoveredTime(null)}
-                            className={`p-3 rounded-lg transition-all relative overflow-hidden ${
-                              formData.time === time
-                                ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-black font-medium shadow-lg shadow-amber-700/30'
-                                : 'bg-black/30 border border-amber-600/20 hover:border-amber-400/40 text-cream'
-                            }`}
-                          >
-                            {/* Ambient hover glow effect */}
-                            {hoveredTime === time && (
-                              <motion.div
-                                layoutId="timeHover"
-                                className="absolute inset-0 bg-amber-600/10"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                              />
-                            )}
-                            <span className="relative z-10">
-                              {time}
-                            </span>
-                          </motion.button>
-                        ))}
-                      </div>
-                      
-                      {validationErrors.time && (
-                        <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.time}</p>
-                      )}
-                    </div>
-                    
-                    {/* Party size */}
-                    <div>
-                      <h3 className="text-xl font-serif font-bold text-amber-400 mb-4 flex items-center gap-2">
-                        <Users className="text-amber-400" size={20} />
-                        Party Size
-                      </h3>
-                      
-                      <div className="flex gap-3">
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                          <motion.button
-                            key={num}
-                            type="button"
-                            whileHover={{ y: -3 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleGuestSelect(num)}
-                            className={`w-12 h-12 flex items-center justify-center rounded-full transition-all ${
-                              formData.guests === num
-                                ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-black font-bold shadow-lg shadow-amber-700/30'
-                                : 'bg-black/30 border border-amber-600/20 hover:border-amber-400/40 text-cream'
-                            }`}
-                          >
-                            {num}
-                          </motion.button>
-                        ))}
-                      </div>
-                      
-                      {validationErrors.guests && (
-                        <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.guests}</p>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-                
-                {/* Step 2: Seating Preferences and Occasion */}
-                {currentStep === 2 && (
-                  <motion.div
-                    key="step2"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className={cn("space-y-8", animateError && "animate-shake")}
-                  >
-                    {/* Seating selection */}
-                    <div>
-                      <h3 className="text-xl font-serif font-bold text-amber-400 mb-6">
-                        Seating Preference
-                      </h3>
-                      
-                      <div className="grid md:grid-cols-4 gap-4">
-                        {seatingOptions.map((option) => (
-                          <motion.div
-                            key={option.id}
-                            whileHover={{ y: -5, backgroundColor: 'rgba(217, 119, 6, 0.15)' }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => handleSeatingSelect(option.id)}
-                            className={`cursor-pointer p-5 rounded-xl flex flex-col items-center justify-center text-center transition-all relative
-                              ${selectedSeating === option.id 
-                                ? 'bg-gradient-to-br from-amber-700/50 to-amber-900/50 border-2 border-amber-500 shadow-lg shadow-amber-700/20'
-                                : 'bg-black/20 border border-amber-600/20'
-                              }
-                            `}
-                          >
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3
-                              ${selectedSeating === option.id
-                                ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-black'
-                                : 'bg-black/30 text-amber-400'
-                              }
-                            `}>
-                              {option.icon}
-                            </div>
-                            <span className="font-medium text-lg text-cream">{option.label}</span>
-                            
-                            {/* Selection indicator */}
-                            {selectedSeating === option.id && (
-                              <motion.div
-                                layoutId="seating-selection"
-                                className="absolute inset-0 rounded-xl border-2 border-amber-400"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                              />
-                            )}
-                          </motion.div>
-                        ))}
-                      </div>
-                      
-                      {validationErrors.seatingPreference && (
-                        <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.seatingPreference}</p>
-                      )}
-                    </div>
-                    
-                    {/* Occasion selection */}
-                    <div>
-                      <h3 className="text-xl font-serif font-bold text-amber-400 mb-4">
-                        Special Occasion
-                      </h3>
-                      
-                      <select
-                        name="occasion"
-                        value={formData.occasion || ''}
-                        onChange={handleInputChange}
-                        className="w-full bg-black/30 border border-amber-600/30 text-cream px-4 py-3 rounded-lg focus:border-amber-400 focus:outline-none transition-colors"
-                      >
-                        <option value="">Select an occasion (optional)</option>
-                        {occasionOptions.map(option => (
-                          <option key={option} value={option}>{option}</option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    {/* Special requests */}
-                    <div>
-                      <h3 className="text-xl font-serif font-bold text-amber-400 mb-4">
-                        Special Requests
-                      </h3>
-                      
-                      <textarea
-                        name="specialRequests"
-                        value={formData.specialRequests || ''}
-                        onChange={handleInputChange}
-                        rows={4}
-                        className="w-full bg-black/30 border border-amber-600/30 text-cream px-4 py-3 rounded-lg focus:border-amber-400 focus:outline-none transition-colors resize-none"
-                        placeholder="Allergies, dietary restrictions, special occasions, seating preferences..."
-                      />
-                    </div>
-                  </motion.div>
-                )}
-                
-                {/* Step 3: Contact Information */}
-                {currentStep === 3 && (
-                  <motion.div
-                    key="step3"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-6"
-                  >
-                    <h3 className="text-xl font-serif font-bold text-amber-400 mb-6">
-                      Your Contact Information
-                    </h3>
-                    
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                          <User size={18} className="text-amber-400/70" />
-                        </div>
-                        <input
-                          type="text"
-                          name="name"
-                          value={formData.name || ''}
-                          onChange={handleInputChange}
-                          className={`w-full bg-black/30 border ${validationErrors.name ? 'border-red-400' : 'border-amber-600/30'} text-cream pl-10 pr-4 py-3 rounded-lg focus:border-amber-400 focus:outline-none transition-colors`}
-                          placeholder="Your full name"
-                        />
-                        {validationErrors.name && (
-                          <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.name}</p>
-                        )}
-                      </div>
-
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                          <Mail size={18} className="text-amber-400/70" />
-                        </div>
-                        <input
-                          type="email"
-                          name="email"
-                          value={formData.email || ''}
-                          onChange={handleInputChange}
-                          className={`w-full bg-black/30 border ${validationErrors.email ? 'border-red-400' : 'border-amber-600/30'} text-cream pl-10 pr-4 py-3 rounded-lg focus:border-amber-400 focus:outline-none transition-colors`}
-                          placeholder="your@email.com"
-                        />
-                        {validationErrors.email && (
-                          <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.email}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <Phone size={18} className="text-amber-400/70" />
-                      </div>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone || ''}
-                        onChange={handleInputChange}
-                        className={`w-full bg-black/30 border ${validationErrors.phone ? 'border-red-400' : 'border-amber-600/30'} text-cream pl-10 pr-4 py-3 rounded-lg focus:border-amber-400 focus:outline-none transition-colors`}
-                        placeholder="+1 (555) 123-4567"
-                      />
-                      {validationErrors.phone && (
-                        <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.phone}</p>
-                      )}
-                    </div>
-                    
-                    <div className="bg-amber-600/10 border border-amber-600/30 p-4 rounded-lg">
-                      <p className="text-cream/80 text-sm">
-                        We'll send a confirmation to your email once your reservation is approved.
-                        You may receive a call to confirm details for special arrangements.
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-                
-                {/* Step 4: Review */}
-                {currentStep === 4 && (
-                  <motion.div
-                    key="step4"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-6"
-                  >
-                    <h3 className="text-xl font-serif font-bold text-amber-400 mb-6">
-                      Review Your Reservation
-                    </h3>
-                    
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="bg-black/30 border border-amber-600/20 p-6 rounded-lg">
-                        <h4 className="font-semibold text-amber-400 text-lg mb-4 flex items-center gap-2">
-                          <Calendar size={18} />
-                          Booking Details
-                        </h4>
-                        
-                        <div className="space-y-3">
-                          <div>
-                            <span className="text-cream/70 text-sm">Date</span>
-                            <p className="text-cream">{selectedDate && formatDisplayDate(selectedDate)}</p>
+                            ))}
                           </div>
-                          <div>
-                            <span className="text-cream/70 text-sm">Time</span>
-                            <p className="text-cream">{formData.time}</p>
-                          </div>
-                          <div>
-                            <span className="text-cream/70 text-sm">Party Size</span>
-                            <p className="text-cream">{formData.guests} guests</p>
-                          </div>
-                          <div>
-                            <span className="text-cream/70 text-sm">Seating Preference</span>
-                            <p className="text-cream">
-                              {seatingOptions.find(option => option.id === formData.seatingPreference)?.label}
-                            </p>
-                          </div>
-                          {formData.occasion && formData.occasion !== 'None' && (
-                            <div>
-                              <span className="text-cream/70 text-sm">Occasion</span>
-                              <p className="text-cream">{formData.occasion}</p>
-                            </div>
+                          
+                          {validationErrors.time && (
+                            <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.time}</p>
                           )}
                         </div>
-                      </div>
-                      
-                      <div className="bg-black/30 border border-amber-600/20 p-6 rounded-lg">
-                        <h4 className="font-semibold text-amber-400 text-lg mb-4 flex items-center gap-2">
-                          <User size={18} />
-                          Contact Information
-                        </h4>
                         
-                        <div className="space-y-3">
-                          <div>
-                            <span className="text-cream/70 text-sm">Name</span>
-                            <p className="text-cream">{formData.name}</p>
+                        {/* Party size */}
+                        <div>
+                          <h3 className="text-xl font-serif font-bold text-amber-400 mb-4 flex items-center gap-2">
+                            <Users className="text-amber-400" size={20} />
+                            Party Size
+                          </h3>
+                          
+                          <div className="flex gap-3">
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                              <motion.button
+                                key={num}
+                                type="button"
+                                whileHover={{ y: -3 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => handleGuestSelect(num)}
+                                className={`w-12 h-12 flex items-center justify-center rounded-full transition-all ${
+                                  formData.guests === num
+                                    ? 'bg-gradient-to-br from-amber-600 to-amber-700 text-black font-bold shadow-lg shadow-amber-700/30'
+                                    : 'bg-black/30 border border-amber-600/20 hover:border-amber-400/40 text-cream'
+                                }`}
+                              >
+                                {num}
+                              </motion.button>
+                            ))}
                           </div>
-                          <div>
-                            <span className="text-cream/70 text-sm">Email</span>
-                            <p className="text-cream">{formData.email}</p>
-                          </div>
-                          <div>
-                            <span className="text-cream/70 text-sm">Phone</span>
-                            <p className="text-cream">{formData.phone}</p>
-                          </div>
+                          
+                          {validationErrors.guests && (
+                            <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.guests}</p>
+                          )}
                         </div>
-                      </div>
-                    </div>
-                    
-                    {formData.specialRequests && (
-                      <div className="bg-black/30 border border-amber-600/20 p-6 rounded-lg">
-                        <h4 className="font-semibold text-amber-400 text-lg mb-2">Special Requests</h4>
-                        <p className="text-cream whitespace-pre-wrap">{formData.specialRequests}</p>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-                
-                {/* Success/Confirmation View */}
-                {isSubmitted && (
-                  <motion.div
-                    key="success"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="relative overflow-hidden"
-                  >
-                    {/* Success animation background */}
-                    <div className="absolute inset-0 overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-amber-900/20 to-transparent z-0"></div>
-                      {Array.from({ length: 8 }).map((_, i) => (
-                        <motion.div
-                          key={i}
-                          className="absolute w-40 h-40 rounded-full bg-amber-600/5"
-                          initial={{ 
-                            x: Math.random() * 100 - 50 + '%', 
-                            y: Math.random() * 100 - 50 + '%', 
-                            scale: 0 
-                          }}
-                          animate={{ 
-                            scale: [0, 1.5, 1],
-                            opacity: [0, 0.4, 0],
-                          }}
-                          transition={{ 
-                            duration: 4,
-                            repeat: Infinity,
-                            delay: i * 0.6,
-                            ease: "easeInOut"
-                          }}
-                        />
-                      ))}
-                    </div>
-                    
-                    <div className="relative z-10 text-center">
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: [0, 1.2, 1] }}
-                        transition={{ duration: 0.7, ease: "easeOut" }}
-                        className="w-24 h-24 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-6"
-                      >
-                        <CheckCircle className="text-black" size={48} />
                       </motion.div>
-                      
-                      <motion.h2
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 }}
-                        className="text-3xl font-serif font-bold text-amber-400 mb-4"
-                      >
-                        Reservation Confirmed
-                      </motion.h2>
-                      
+                    )}
+                    
+                    {/* Step 2: Seating Preferences and Occasion */}
+                    {currentStep === 2 && (
                       <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.8 }}
+                        key="step2"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className={cn("space-y-8", animateError && "animate-shake")}
+                      >
+                        {/* Seating selection */}
+                        <div>
+                          <h3 className="text-xl font-serif font-bold text-amber-400 mb-6">
+                            Seating Preference
+                          </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {seatingOptions.map((option) => (
+                              <motion.div
+                                key={option.id}
+                                whileHover={{ y: -5, backgroundColor: 'rgba(217, 119, 6, 0.15)' }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleSeatingSelect(option.id)}
+                                className={`cursor-pointer p-5 rounded-xl flex flex-col items-center justify-center text-center transition-all relative
+                                  ${selectedSeating === option.id 
+                                    ? 'bg-gradient-to-br from-amber-700/50 to-amber-900/50 border-2 border-amber-500 shadow-lg shadow-amber-700/20'
+                                    : 'bg-black/20 border border-amber-600/20'
+                                  }
+                                `}
+                              >
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3
+                                  ${selectedSeating === option.id
+                                    ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-black'
+                                    : 'bg-black/30 text-amber-400'
+                                  }
+                                `}>
+                                  {option.icon}
+                                </div>
+                                <span className="font-medium text-lg text-cream">{option.label}</span>
+                                
+                                {/* Selection indicator */}
+                                {selectedSeating === option.id && (
+                                  <motion.div
+                                    layoutId="seating-selection"
+                                    className="absolute inset-0 rounded-xl border-2 border-amber-400"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                  />
+                                )}
+                              </motion.div>
+                            ))}
+                          </div>
+                          
+                          {validationErrors.seatingPreference && (
+                            <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.seatingPreference}</p>
+                          )}
+                        </div>
+                        
+                        {/* Occasion selection */}
+                        <div>
+                          <h3 className="text-xl font-serif font-bold text-amber-400 mb-4">
+                            Special Occasion
+                          </h3>
+                          
+                          <select
+                            name="occasion"
+                            value={formData.occasion || ''}
+                            onChange={handleInputChange}
+                            className="w-full bg-black/30 border border-amber-600/30 text-cream px-4 py-3 rounded-lg focus:border-amber-400 focus:outline-none transition-colors"
+                          >
+                            <option value="">Select an occasion (optional)</option>
+                            {occasionOptions.map(option => (
+                              <option key={option} value={option}>{option}</option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        {/* Special requests */}
+                        <div>
+                          <h3 className="text-xl font-serif font-bold text-amber-400 mb-4">
+                            Special Requests
+                          </h3>
+                          
+                          <textarea
+                            name="specialRequests"
+                            value={formData.specialRequests || ''}
+                            onChange={handleInputChange}
+                            rows={4}
+                            className="w-full bg-black/30 border border-amber-600/30 text-cream px-4 py-3 rounded-lg focus:border-amber-400 focus:outline-none transition-colors resize-none"
+                            placeholder="Allergies, dietary restrictions, special occasions, seating preferences..."
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                    
+                    {/* Step 3: Contact Information */}
+                    {currentStep === 3 && (
+                      <motion.div
+                        key="step3"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
                         className="space-y-6"
                       >
-                        <p className="text-cream text-xl mb-8">
-                          Thank you for your reservation. We're looking forward to serving you.
-                        </p>
+                        <h3 className="text-xl font-serif font-bold text-amber-400 mb-6">
+                          Your Contact Information
+                        </h3>
                         
-                        <div className="bg-black/30 backdrop-blur-sm border border-amber-600/30 p-6 rounded-xl max-w-md mx-auto">
-                          <div className="grid grid-cols-2 gap-4 text-left">
-                            <div>
-                              <p className="text-amber-400/80 text-sm mb-1">Reservation ID</p>
-                              <p className="text-cream font-medium">{reservationId.substring(0, 8)}</p>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                              <User size={18} className="text-amber-400/70" />
                             </div>
-                            <div>
-                              <p className="text-amber-400/80 text-sm mb-1">Guest Name</p>
-                              <p className="text-cream font-medium">{formData.name}</p>
+                            <input
+                              type="text"
+                              name="name"
+                              value={formData.name || ''}
+                              onChange={handleInputChange}
+                              className={`w-full bg-black/30 border ${validationErrors.name ? 'border-red-400' : 'border-amber-600/30'} text-cream pl-10 pr-4 py-3 rounded-lg focus:border-amber-400 focus:outline-none transition-colors`}
+                              placeholder="Your full name"
+                            />
+                            {validationErrors.name && (
+                              <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.name}</p>
+                            )}
+                          </div>
+
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                              <Mail size={18} className="text-amber-400/70" />
                             </div>
-                            <div>
-                              <p className="text-amber-400/80 text-sm mb-1">Date</p>
-                              <p className="text-cream font-medium">
-                                {selectedDate && formatDisplayDate(selectedDate)}
-                              </p>
+                            <input
+                              type="email"
+                              name="email"
+                              value={formData.email || ''}
+                              onChange={handleInputChange}
+                              className={`w-full bg-black/30 border ${validationErrors.email ? 'border-red-400' : 'border-amber-600/30'} text-cream pl-10 pr-4 py-3 rounded-lg focus:border-amber-400 focus:outline-none transition-colors`}
+                              placeholder="your@email.com"
+                            />
+                            {validationErrors.email && (
+                              <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.email}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <Phone size={18} className="text-amber-400/70" />
+                          </div>
+                          <input
+                            type="tel"
+                            name="phone"
+                            value={formData.phone || ''}
+                            onChange={handleInputChange}
+                            className={`w-full bg-black/30 border ${validationErrors.phone ? 'border-red-400' : 'border-amber-600/30'} text-cream pl-10 pr-4 py-3 rounded-lg focus:border-amber-400 focus:outline-none transition-colors`}
+                            placeholder="+1 (555) 123-4567"
+                          />
+                          {validationErrors.phone && (
+                            <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.phone}</p>
+                          )}
+                        </div>
+                        
+                        <div className="bg-amber-600/10 border border-amber-600/30 p-4 rounded-lg">
+                          <p className="text-cream/80 text-sm">
+                            We'll send a confirmation to your email once your reservation is approved.
+                            You may receive a call to confirm details for special arrangements.
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                    
+                    {/* Step 4: Review */}
+                    {currentStep === 4 && (
+                      <motion.div
+                        key="step4"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="space-y-6"
+                      >
+                        <h3 className="text-xl font-serif font-bold text-amber-400 mb-6">
+                          Review Your Reservation
+                        </h3>                          <div className="grid md:grid-cols-2 gap-6">
+                          <div className="bg-black/30 border border-amber-600/20 p-4 sm:p-6 rounded-lg">
+                            <h4 className="font-semibold text-amber-400 text-lg mb-4 flex items-center gap-2">
+                              <Calendar size={18} />
+                              Booking Details
+                            </h4>
+                            
+                            <div className="space-y-3">
+                              <div>
+                                <span className="text-cream/70 text-sm">Date</span>
+                                <p className="text-cream">{selectedDate && formatDisplayDate(selectedDate)}</p>
+                              </div>
+                              <div>
+                                <span className="text-cream/70 text-sm">Time</span>
+                                <p className="text-cream">{formData.time}</p>
+                              </div>
+                              <div>
+                                <span className="text-cream/70 text-sm">Party Size</span>
+                                <p className="text-cream">{formData.guests} guests</p>
+                              </div>
+                              <div>
+                                <span className="text-cream/70 text-sm">Seating Preference</span>
+                                <p className="text-cream">
+                                  {seatingOptions.find(option => option.id === formData.seatingPreference)?.label}
+                                </p>
+                              </div>
+                              {formData.occasion && formData.occasion !== 'None' && (
+                                <div>
+                                  <span className="text-cream/70 text-sm">Occasion</span>
+                                  <p className="text-cream">{formData.occasion}</p>
+                                </div>
+                              )}
                             </div>
-                            <div>
-                              <p className="text-amber-400/80 text-sm mb-1">Time</p>
-                              <p className="text-cream font-medium">{formData.time}</p>
-                            </div>
-                            <div>
-                              <p className="text-amber-400/80 text-sm mb-1">Party Size</p>
-                              <p className="text-cream font-medium">{formData.guests} guests</p>
-                            </div>
-                            <div>
-                              <p className="text-amber-400/80 text-sm mb-1">Seating</p>
-                              <p className="text-cream font-medium">
-                                {seatingOptions.find(option => option.id === formData.seatingPreference)?.label}
-                              </p>
+                          </div>
+                            <div className="bg-black/30 border border-amber-600/20 p-4 sm:p-6 rounded-lg">
+                            <h4 className="font-semibold text-amber-400 text-lg mb-4 flex items-center gap-2">
+                              <User size={18} />
+                              Contact Information
+                            </h4>
+                            
+                            <div className="space-y-3">
+                              <div>
+                                <span className="text-cream/70 text-sm">Name</span>
+                                <p className="text-cream">{formData.name}</p>
+                              </div>
+                              <div>
+                                <span className="text-cream/70 text-sm">Email</span>
+                                <p className="text-cream">{formData.email}</p>
+                              </div>
+                              <div>
+                                <span className="text-cream/70 text-sm">Phone</span>
+                                <p className="text-cream">{formData.phone}</p>
+                              </div>
                             </div>
                           </div>
                         </div>
                         
-                        <div className="pt-6">
-                          <Button
-                            onClick={onClose}
-                            className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-black px-8 py-3 font-semibold rounded-full transition-colors"
+                        {formData.specialRequests && (
+                          <div className="bg-black/30 border border-amber-600/20 p-6 rounded-lg">
+                            <h4 className="font-semibold text-amber-400 text-lg mb-2">Special Requests</h4>
+                            <p className="text-cream whitespace-pre-wrap">{formData.specialRequests}</p>
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                    
+                    {/* Success/Confirmation View */}
+                    {isSubmitted && (
+                      <motion.div
+                        key="success"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="relative overflow-hidden"
+                      >
+                        {/* Success animation background */}
+                        <div className="absolute inset-0 overflow-hidden">
+                          <div className="absolute inset-0 bg-gradient-to-br from-amber-900/20 to-transparent z-0"></div>
+                          {Array.from({ length: 8 }).map((_, i) => (
+                            <motion.div
+                              key={i}
+                              className="absolute w-40 h-40 rounded-full bg-amber-600/5"
+                              initial={{ 
+                                x: Math.random() * 100 - 50 + '%', 
+                                y: Math.random() * 100 - 50 + '%', 
+                                scale: 0 
+                              }}
+                              animate={{ 
+                                scale: [0, 1.5, 1],
+                                opacity: [0, 0.4, 0],
+                              }}
+                              transition={{ 
+                                duration: 4,
+                                repeat: Infinity,
+                                delay: i * 0.6,
+                                ease: "easeInOut"
+                              }}
+                            />
+                          ))}
+                        </div>
+                        
+                        <div className="relative z-10 text-center">
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: [0, 1.2, 1] }}
+                            transition={{ duration: 0.7, ease: "easeOut" }}
+                            className="w-24 h-24 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-6"
                           >
-                            Done
-                          </Button>
+                            <CheckCircle className="text-black" size={48} />
+                          </motion.div>
+                          
+                          <motion.h2
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.5 }}
+                            className="text-3xl font-serif font-bold text-amber-400 mb-4"
+                          >
+                            Reservation Confirmed
+                          </motion.h2>
+                          
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.8 }}
+                            className="space-y-6"
+                          >
+                            <p className="text-cream text-xl mb-8">
+                              Thank you for your reservation. We're looking forward to serving you.
+                            </p>
+                            
+                            <div className="bg-black/30 backdrop-blur-sm border border-amber-600/30 p-6 rounded-xl max-w-md mx-auto">
+                              <div className="grid grid-cols-2 gap-4 text-left">
+                                <div>
+                                  <p className="text-amber-400/80 text-sm mb-1">Reservation ID</p>
+                                  <p className="text-cream font-medium">{reservationId.substring(0, 8)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-amber-400/80 text-sm mb-1">Guest Name</p>
+                                  <p className="text-cream font-medium">{formData.name}</p>
+                                </div>
+                                <div>
+                                  <p className="text-amber-400/80 text-sm mb-1">Date</p>
+                                  <p className="text-cream font-medium">
+                                    {selectedDate && formatDisplayDate(selectedDate)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-amber-400/80 text-sm mb-1">Time</p>
+                                  <p className="text-cream font-medium">{formData.time}</p>
+                                </div>
+                                <div>
+                                  <p className="text-amber-400/80 text-sm mb-1">Party Size</p>
+                                  <p className="text-cream font-medium">{formData.guests} guests</p>
+                                </div>
+                                <div>
+                                  <p className="text-amber-400/80 text-sm mb-1">Seating</p>
+                                  <p className="text-cream font-medium">
+                                    {seatingOptions.find(option => option.id === formData.seatingPreference)?.label}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="pt-6">
+                              <Button
+                                onClick={onClose}
+                                className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-black px-8 py-3 font-semibold rounded-full transition-colors"
+                              >
+                                Done
+                              </Button>
+                            </div>
+                          </motion.div>
                         </div>
                       </motion.div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              
-              {/* Navigation buttons */}
-              {!isSubmitted && (
-                <div className="mt-10 flex justify-between">
-                  {currentStep > 1 && (
-                    <motion.button
-                      type="button"
-                      onClick={handlePrevStep}
-                      whileHover={{ x: -3 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="flex items-center gap-2 text-amber-400 hover:text-amber-300 transition-colors"
-                    >
-                      <ChevronLeft size={20} />
-                      <span>Previous</span>
-                    </motion.button>
-                  )}
-                  
-                  <div className="ml-auto">
-                    {currentStep < 4 ? (
-                      <motion.button
-                        type="button"
-                        onClick={handleNextStep}
-                        whileHover={{ x: 3 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-black px-6 py-3 rounded-lg font-semibold transition-colors"
-                      >
-                        <span>Next</span>
-                        <ChevronRight size={20} />
-                      </motion.button>
-                    ) : (
-                      <motion.button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={isSubmitting}
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 disabled:opacity-50 text-black px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
-                            <span>Processing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Confirm Reservation</span>
-                            <CheckCircle size={18} />
-                          </>
-                        )}
-                      </motion.button>
                     )}
-                  </div>
+                  </AnimatePresence>
+                    {/* Navigation buttons */}
+                  {!isSubmitted && (
+                    <div className="mt-10 flex flex-col sm:flex-row justify-between space-y-4 sm:space-y-0">
+                      {currentStep > 1 && (
+                        <motion.button
+                          type="button"
+                          onClick={handlePrevStep}
+                          whileHover={{ x: -3 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="flex items-center justify-center gap-2 text-amber-400 hover:text-amber-300 transition-colors w-full sm:w-auto sm:mr-auto"
+                        >
+                          <ChevronLeft size={20} />
+                          <span>Previous</span>
+                        </motion.button>
+                      )}
+                      
+                      <div className={`${currentStep > 1 ? 'sm:ml-auto' : ''} w-full`}>
+                        {currentStep < 4 ? (
+                          <motion.button
+                            type="button"
+                            onClick={handleNextStep}
+                            whileHover={{ x: 3 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="flex items-center justify-center gap-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-black px-6 py-3 rounded-lg font-semibold transition-colors w-full sm:w-auto"
+                          >
+                            <span>Next</span>
+                            <ChevronRight size={20} />
+                          </motion.button>
+                        ) : (
+                          <motion.button
+                            type="button"
+                            onClick={handleSubmit}
+                            disabled={isSubmitting}
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 disabled:opacity-50 text-black px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 w-full sm:w-auto min-w-[200px]"
+                          >
+                            {isSubmitting ? (
+                              <>
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
+                                <span>Processing...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Confirm Reservation</span>
+                                <CheckCircle size={18} />
+                              </>
+                            )}
+                          </motion.button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            </motion.div>
           </motion.div>
         </motion.div>
       )}

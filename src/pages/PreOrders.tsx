@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import QRCode from "react-qr-code";
-import TitleBar from "@/components/TitleBar";
 import { 
   CheckCircle, XCircle, Clock, Utensils, Info, User, Mail, 
   Phone, Search, ShoppingCart, Filter, X, Plus, Minus, 
@@ -570,12 +569,8 @@ const PreOrders = () => {
       return date;
     }
   };
-
   return (
     <div className="min-h-screen bg-charcoal pt-20 pb-8 px-2 sm:px-4 overflow-x-hidden">
-      {/* Only include the TitleBar once - it will render the navigation from the component */}
-      <TitleBar />
-      
       {/* Confetti Canvas for Order Success */}
       <canvas 
         ref={confettiCanvasRef}

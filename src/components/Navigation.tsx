@@ -57,13 +57,12 @@ const Navigation = () => {
   ];
   return (
     <>      {/* Desktop Navigation - hidden on mobile */}
-      <nav className={`hidden md:block fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out
         ${scrolled 
           ? 'bg-gradient-to-r from-black/95 via-charcoal/95 to-black/95 backdrop-blur-lg shadow-[0_8px_40px_rgba(0,0,0,0.4)] border-b border-amber-600/30 py-3' 
           : 'bg-gradient-to-r from-black/0 via-transparent to-black/0 backdrop-blur-none shadow-none border-b border-transparent py-4'
-        }`}>        <div className="container mx-auto px-6">
-          <div className="flex justify-between items-center">
-            {/* Logo */}            <div className="relative flex flex-col items-start">
+        }`}><div className="container mx-auto px-6">          <div className="flex justify-between items-center">
+            {/* Logo */}            <div className="relative flex flex-col items-start md:block hidden">
               <Link to="/" className="flex items-center gap-2 text-3xl font-serif font-bold text-amber-400 hover:text-amber-300 transition-colors">
                 <Sparkles className="lucide lucide-sparkles text-gold drop-shadow-glow" />
                 Jemini Foods
@@ -137,10 +136,9 @@ const Navigation = () => {
                 </div>
               )}
             </div>
-            
-            {/* Mobile Menu Toggle */}
+              {/* Mobile Menu Toggle - hidden on mobile since we have bottom nav */}
             <button 
-              className="lg:hidden text-amber-400 hover:text-amber-300 transition-colors"
+              className="md:hidden lg:hidden text-amber-400 hover:text-amber-300 transition-colors hidden"
               onClick={() => setIsOpen(!isOpen)}
             >
               <Menu size={28} />

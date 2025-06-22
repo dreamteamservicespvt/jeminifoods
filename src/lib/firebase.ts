@@ -5,13 +5,13 @@ import { getStorage } from 'firebase/storage';
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyCLYxW_2qvpkmMy75LJPvMusEnbEzq3jWo",
-  authDomain: "reeves-dining.firebaseapp.com",
-  projectId: "reeves-dining",
-  storageBucket: "reeves-dining.appspot.com",
-  messagingSenderId: "387714717936",
-  appId: "1:387714717936:web:1fc4a2b6e50388a9cd8a35",
-  measurementId: "G-P2TEYKW1FW"
+  apiKey: "AIzaSyBJL0zn5BrGPv_PKzCbcTRNTODEsE-TFhE",
+  authDomain: "jemini-foods.firebaseapp.com",
+  projectId: "jemini-foods",
+  storageBucket: "jemini-foods.appspot.com",
+  messagingSenderId: "624232266019",
+  appId: "1:624232266019:web:8d7931c52cf7f2aa55a0c4",
+  measurementId: "G-Z1RVG9TN1Y"
 };
 
 // Initialize Firebase

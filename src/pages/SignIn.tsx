@@ -109,13 +109,14 @@ const SignIn = () => {
       } else if (isSignUp) {
         // Create new account
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
-        // Create user profile in Firestore
+          // Create user profile in Firestore with appropriate role
+        const isAdmin = email === 'admin@jeminifoods.com';
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           name,
           email,
           createdAt: serverTimestamp(),
-          profileImage: null
+          profileImage: null,
+          role: isAdmin ? 'admin' : 'user'
         });
         
         playFeedback('success');
@@ -164,13 +165,14 @@ const SignIn = () => {
       const userRef = doc(db, 'users', userCredential.user.uid);
       const userDoc = await getDoc(userRef);
       
-      if (!userDoc.exists()) {
-        // Create new user profile
+      if (!userDoc.exists()) {        // Create new user profile with appropriate role
+        const isAdmin = userCredential.user.email === 'admin@jeminifoods.com';
         await setDoc(userRef, {
           name: userCredential.user.displayName,
           email: userCredential.user.email,
           profileImage: userCredential.user.photoURL,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
+          role: isAdmin ? 'admin' : 'user'
         });
       }
       
