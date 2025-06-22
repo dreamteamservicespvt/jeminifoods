@@ -13,8 +13,17 @@ import { auth, db } from '../lib/firebase';
 import { Mail, Lock, Eye, EyeOff, User, ChevronRight, Loader2, X, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useForm } from 'react-hook-form';
+
+// Define form data interface
+interface SignInFormData {
+  email: string;
+  password: string;
+}
 
 const SignIn = () => {
+  // Form state
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<SignInFormData>();
   // Authentication states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -201,6 +210,65 @@ const SignIn = () => {
     setResetPassword(!resetPassword);
     setResetSent(false);
     setError('');
+  };
+
+  // Handle login
+  const handleLogin = async (data: SignInFormData) => {
+    setIsLoading(true);
+    setError('');
+    playFeedback('click');
+    
+    try {
+      // Authenticate user
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      const uid = userCredential.user.uid;
+      
+      // Check if user exists in Firestore and get role information
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      
+      // If user document exists in Firestore
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        // Check if user is an admin
+        const isAdmin = userData.role === 'admin';
+        
+        // Redirect to appropriate dashboard based on role
+        navigate(isAdmin ? '/admin/dashboard' : '/user-dashboard');
+      } else {
+        // If user exists in auth but not in Firestore, create user doc
+        // This could happen if auth was created but Firestore doc failed
+        const isAdmin = data.email === 'admin@jeminifoods.com';
+        await setDoc(doc(db, 'users', uid), {
+          fullName: '',
+          email: data.email,
+          phone: '',
+          profileImage: null,
+          createdAt: serverTimestamp(),
+          provider: 'email',
+          role: isAdmin ? 'admin' : 'user'
+        });
+        
+        // Redirect to appropriate dashboard
+        navigate(isAdmin ? '/admin/dashboard' : '/user-dashboard');
+      }
+      
+      playFeedback('success');
+      reset();
+      
+    } catch (error: any) {
+      console.error('Login error:', error);
+      playFeedback('error');
+      
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        setError('Invalid email or password. Please try again.');
+      } else if (error.code === 'auth/too-many-requests') {
+        setError('Too many unsuccessful login attempts. Please try again later.');
+      } else {
+        setError('Failed to sign in. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Form section variants for animations

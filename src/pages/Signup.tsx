@@ -97,11 +97,15 @@ const Signup = () => {
     try {
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
-        // Create user profile in Firestore with appropriate role
-      const isAdmin = userCredential.user.email === 'admin@jeminifoods.com';
+      const userEmail = userCredential.user.email || '';
+      
+      // Check if the email is admin
+      const isAdmin = userEmail === 'admin@jeminifoods.com';
+      
+      // Create user profile in Firestore with appropriate role
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         fullName: userCredential.user.displayName || '',
-        email: userCredential.user.email || '',
+        email: userEmail,
         phone: '',
         profileImage: userCredential.user.photoURL || null,
         createdAt: serverTimestamp(),
@@ -114,7 +118,8 @@ const Signup = () => {
       playSound('success');
       
       setTimeout(() => {
-        navigate('/user-dashboard');
+        // Redirect admin users to admin dashboard, regular users to user dashboard
+        navigate(isAdmin ? '/admin/dashboard' : '/user-dashboard');
       }, 2000);
       
     } catch (error: any) {

@@ -1,11 +1,11 @@
 // Firebase configuration for Jemini Foods
-
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 export const firebaseConfig = {
-  apiKey: "AIzaSyCLYxW_2qvpkmMy75LJPvMusEnbEzq3jWo",
-  authDomain: "reeves-dining.firebaseapp.com",
-  projectId: "reeves-dining",
-  storageBucket: "reeves-dining.appspot.com",
-  messagingSenderId: "387714717936",
-  appId: "1:387714717936:web:1fc4a2b6e50388a9cd8a35",
-  measurementId: "G-P2TEYKW1FW"
+  apiKey: "AIzaSyApmWBxCoTq_ki5NYfWgDZofzLJ3toBlaU",
+  authDomain: "jeminifoods-43a69.firebaseapp.com",
+  projectId: "jeminifoods-43a69",
+  storageBucket: "jeminifoods-43a69.appspot.com", // Fixed storage bucket URL
+  messagingSenderId: "929726908159",
+  appId: "1:929726908159:web:160c858ecd3ea03e3aaeca",
+  measurementId: "G-KPF0LDZ0QT"
 };

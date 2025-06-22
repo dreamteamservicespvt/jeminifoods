@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { auth, db } from '../../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle, ShieldAlert } from 'lucide-react';
 
-const AdminLogin = () => {
-  const [email, setEmail] = useState('');
+const AdminLogin = () => {  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,12 +18,34 @@ const AdminLogin = () => {
     setError('');
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // Verify credentials
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+      
+      // Check if user has admin role
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      
+      if (userDoc.exists() && userDoc.data().role === 'admin') {
+        // Admin login successful, navigate to admin dashboard
+        navigate('/admin/dashboard');
+      } else {
+        // User exists but is not an admin
+        setError('You do not have administrator privileges.');
+      }
     } catch (error: any) {
-      setError('Invalid credentials. Please try again.');
       console.error('Login error:', error);
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        setError('Invalid email or password. Please try again.');
+      } else if (error.code === 'auth/too-many-requests') {
+        setError('Too many unsuccessful login attempts. Please try again later.');
+      } else if (error.code?.includes('api-key-not-valid')) {
+        setError('Authentication service error. Please contact support.');
+      } else {
+        setError('An error occurred. Please try again later.');
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
