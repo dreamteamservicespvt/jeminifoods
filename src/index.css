@@ -1,0 +1,259 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
+@import './styles/mobile-animations.css';
+@import './styles/admin-mobile.css';
+@import './styles/typography.css';
+@import './styles/menu-animations.css';
+
+/* Honest Script custom font import */
+@font-face {
+  font-family: 'Honest Script';
+  src: url('/fonts/HonestScript-Regular.woff2') format('woff2'),
+       url('/fonts/HonestScript-Regular.woff') format('woff'),
+       url('/fonts/HonestScript-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Honest Script Bold';
+  src: url('/fonts/HonestScript-Bold.woff2') format('woff2'),
+       url('/fonts/HonestScript-Bold.woff') format('woff'),
+       url('/fonts/HonestScript-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+
+    /* Enhanced Restaurant Colors */
+    --charcoal: 210 12% 8%;
+    --cream: 45 29% 92%;
+    --gold: 42 89% 55%;
+    --amber-dark: 42 89% 45%;
+    --amber-light: 42 89% 65%;
+
+    /* Custom color variables for gradients */
+    --color-gold: #ffc246;
+    --color-gold-light: #ffcf6e;
+    --color-cream: #f5f5f5;
+    --gradient-gold: linear-gradient(to right, var(--color-gold), var(--color-gold-light));
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    padding-top: 0; /* Remove default padding as we handle it with the h-[73px] div */
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Honest Script', serif;
+    letter-spacing: 0;
+    line-height: 1.2;
+  }
+
+  h1 {
+    font-weight: bold;
+    font-family: 'Honest Script Bold', serif;
+  }
+  
+  h2 {
+    font-weight: bold;
+  }
+  
+  .font-alt {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500;
+  }
+  
+  .font-accent {
+    font-family: 'Honest Script', serif;
+    letter-spacing: 0.01em;
+  }
+  
+  .font-light-serif {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    letter-spacing: 0.01em;
+  }
+
+  p {
+    line-height: 1.7;
+  }
+}
+
+@layer utilities {
+  .bg-charcoal {
+    background-color: hsl(var(--charcoal));
+  }
+  
+  .text-cream {
+    color: hsl(var(--cream));
+  }
+  
+  .text-gold {
+    color: var(--color-gold);
+  }
+  
+  .bg-gold {
+    background-color: hsl(var(--gold));
+  }
+  
+  .border-gold {
+    border-color: hsl(var(--gold));
+  }
+  
+  .drop-shadow-glow {
+    filter: drop-shadow(0 0 5px rgba(255, 194, 70, 0.5));
+  }
+  
+  /* Text gradient utility */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+  }
+  
+  .bg-gradient-gold {
+    background: var(--gradient-gold);
+  }
+  
+  /* Glass effect utilities */
+  .glassmorphism {
+    @apply backdrop-blur-md bg-black/60 border border-amber-600/20;
+  }
+  
+  .glassmorphism-light {
+    @apply backdrop-blur-sm bg-white/10 border border-white/20;
+  }
+  
+  /* Mobile optimized utilities */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px]; /* Minimum 44x44px for proper touch targets */
+  }
+  
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+  
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 16px);
+  }
+  
+  .mobile-scrollbar-hidden {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .mobile-scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Scrollbar hide utilities */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar { 
+    display: none;  /* Safari and Chrome */
+  }
+
+  /* Line clamp utilities for text truncation */
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+  
+  /* Enhanced animated underline effect */
+  .hover-underline {
+    @apply relative;
+  }
+  
+  .hover-underline::after {
+    content: '';
+    @apply absolute left-0 bottom-0 w-0 h-px bg-gradient-to-r from-amber-400 to-amber-600 transition-all duration-300;
+  }
+  
+  .hover-underline:hover::after {
+    @apply w-full;
+  }
+  
+  /* Animation for gradient background */
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+
+  }  
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 6s ease infinite;
+  }
+  
+  .touch-ripple {
+    @apply relative overflow-hidden;
+  }
+}

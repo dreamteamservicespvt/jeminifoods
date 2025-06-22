@@ -1,0 +1,187 @@
+/* Menu Page Specific Animations */
+
+/* Floating particles animation */
+@keyframes float-particles {
+  0% {
+    transform: translateY(100vh) translateX(0px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.3;
+  }
+  90% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateY(-10px) translateX(50px);
+    opacity: 0;
+  }
+}
+
+.particle {
+  animation: float-particles linear infinite;
+}
+
+/* Category filter pill hover effects */
+.category-pill {
+  position: relative;
+  overflow: hidden;
+}
+
+.category-pill::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.category-pill:hover::before {
+  left: 100%;
+}
+
+/* Menu card image hover effects */
+.menu-card-image {
+  transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.menu-card:hover .menu-card-image {
+  transform: scale(1.1) rotate(1deg);
+}
+
+/* Price tag pulse animation */
+@keyframes price-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(251, 191, 36, 0);
+  }
+}
+
+.price-tag:hover {
+  animation: price-pulse 1.5s infinite;
+}
+
+/* Dietary tag animations */
+.dietary-tag {
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.dietary-tag:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+
+/* Search input focus glow */
+.search-input:focus {
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1),
+              0 0 20px rgba(251, 191, 36, 0.2),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Smooth reveal animation for menu items */
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.menu-item-reveal {
+  animation: reveal-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Loading skeleton shimmer effect */
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, 
+    rgba(251, 191, 36, 0.05) 25%, 
+    rgba(251, 191, 36, 0.1) 50%, 
+    rgba(251, 191, 36, 0.05) 75%);
+  background-size: 400% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+/* Filter bar sticky transition */
+.filter-bar-sticky {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(20px);
+}
+
+/* Enhanced button hover effects */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s ease;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+/* Hero section text animation */
+@keyframes text-glow {
+  0%, 100% {
+    text-shadow: 0 0 5px rgba(251, 191, 36, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(251, 191, 36, 0.6),
+                 0 0 30px rgba(251, 191, 36, 0.4);
+  }
+}
+
+.hero-title {
+  animation: text-glow 3s ease-in-out infinite;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .menu-card:hover .menu-card-image {
+    transform: none; /* Disable hover effects on mobile */
+  }
+  
+  .category-pill:hover::before {
+    left: -100%; /* Disable shine effect on mobile */
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .particle,
+  .price-tag:hover,
+  .hero-title {
+    animation: none;
+  }
+  
+  .menu-card-image,
+  .dietary-tag {
+    transition: none;
+  }
+}

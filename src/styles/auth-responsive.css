@@ -1,0 +1,274 @@
+/* Mobile-first responsive authentication styles */
+
+/* Base mobile styles */
+@media (max-width: 640px) {
+  .auth-container {
+    padding: 1rem;
+    min-height: 100vh;
+  }
+  
+  .auth-card {
+    padding: 1.5rem;
+    margin: 0;
+    border-radius: 0.75rem;
+  }
+  
+  .auth-form {
+    gap: 1rem;
+  }
+  
+  .auth-input {
+    padding: 0.875rem 1rem;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+  }
+  
+  .auth-button {
+    padding: 0.875rem 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    min-height: 3rem;
+  }
+  
+  .auth-title {
+    font-size: 1.75rem;
+    line-height: 1.2;
+  }
+  
+  .auth-subtitle {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  
+  .auth-link {
+    font-size: 0.875rem;
+  }
+  
+  /* Password strength indicator on mobile */
+  .password-strength-mobile {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .password-strength-bar {
+    height: 0.25rem;
+    border-radius: 0.125rem;
+  }
+  
+  /* Mobile form animations */
+  .auth-form-mobile {
+    transform: translateY(0);
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .auth-form-mobile.error {
+    animation: shake 0.5s ease-in-out;
+  }
+  
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+}
+
+/* Tablet styles */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .auth-container {
+    padding: 2rem;
+  }
+  
+  .auth-card {
+    padding: 2rem;
+    max-width: 28rem;
+    margin: 0 auto;
+  }
+  
+  .auth-form {
+    gap: 1.25rem;
+  }
+  
+  .auth-input {
+    padding: 1rem 1.25rem;
+    font-size: 1rem;
+  }
+  
+  .auth-button {
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    min-height: 3.5rem;
+  }
+  
+  .auth-title {
+    font-size: 2rem;
+  }
+  
+  .auth-subtitle {
+    font-size: 1rem;
+  }
+}
+
+/* Desktop styles */
+@media (min-width: 1025px) {
+  .auth-container {
+    padding: 2rem;
+  }
+  
+  .auth-card {
+    padding: 2.5rem;
+    max-width: 32rem;
+    margin: 0 auto;
+  }
+  
+  .auth-form {
+    gap: 1.5rem;
+  }
+  
+  .auth-input {
+    padding: 1rem 1.25rem;
+    font-size: 1rem;
+  }
+  
+  .auth-button {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+    min-height: 3.5rem;
+  }
+  
+  .auth-title {
+    font-size: 2.25rem;
+  }
+  
+  .auth-subtitle {
+    font-size: 1rem;
+  }
+  
+  /* Desktop hover effects */
+  .auth-card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .auth-input:hover {
+    border-color: rgba(245, 158, 11, 0.5);
+    transition: border-color 0.2s ease-in-out;
+  }
+  
+  .auth-button:hover {
+    transform: scale(1.02);
+    transition: transform 0.2s ease-in-out;
+  }
+}
+
+/* Focus states for accessibility */
+.auth-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.5);
+  border-color: #f59e0b;
+}
+
+.auth-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.5);
+}
+
+/* Error animations */
+.auth-error {
+  animation: slideInError 0.3s ease-out;
+}
+
+@keyframes slideInError {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Success animations */
+.auth-success {
+  animation: slideInSuccess 0.5s ease-out;
+}
+
+@keyframes slideInSuccess {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Loading spinner animations */
+.auth-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Particle animations */
+.auth-particle {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { 
+    transform: translateY(0px) rotate(0deg); 
+    opacity: 0.2;
+  }
+  50% { 
+    transform: translateY(-20px) rotate(180deg); 
+    opacity: 0.8;
+  }
+}
+
+/* Background gradient animations */
+.auth-bg-gradient {
+  background: linear-gradient(-45deg, #1f2937, #000000, #374151, #111827);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .auth-input {
+    border-width: 2px;
+  }
+  
+  .auth-button {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .auth-form-mobile,
+  .auth-card,
+  .auth-button,
+  .auth-input,
+  .auth-particle,
+  .auth-bg-gradient {
+    animation: none;
+    transition: none;
+  }
+  
+  .auth-card:hover,
+  .auth-button:hover {
+    transform: none;
+  }
+}
