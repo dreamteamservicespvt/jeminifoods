@@ -211,7 +211,6 @@
   .scrollbar-hide::-webkit-scrollbar { 
     display: none;  /* Safari and Chrome */
   }
-
   /* Line clamp utilities for text truncation */
   .line-clamp-2 {
     overflow: hidden;
@@ -225,6 +224,11 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
+  }
+  
+  /* Text shadow for better readability on image backgrounds */
+  .text-shadow-lg {
+    text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.8), 0px 4px 12px rgba(0, 0, 0, 0.6);
   }
   
   /* Enhanced animated underline effect */

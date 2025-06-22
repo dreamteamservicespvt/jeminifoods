@@ -119,8 +119,7 @@ const Home = () => {
   }
 
   return (
-    <>
-      {/* Hero Section with updated image */}
+    <>      {/* Enhanced Hero Section with image slideshow */}
       <HeroSection 
         title="Jemini Foods"
         subtitle="A culinary journey that transcends dining into an art form"
@@ -129,6 +128,14 @@ const Home = () => {
         secondaryButtonText="Explore Menu"
         secondaryButtonLink="/menu"
         scrollIndicator={true}
+        backgroundImagesSrc={[
+          "https://www.tripsavvy.com/thmb/ur_fR8DA8gCZFl3sMe6t9rJ1peE=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/26-5adafa56c6733500373c3cf5.jpg",
+          "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/18/b3/78/fa/tamra-restaurant.jpg?w=600&h=-1&s=1",
+          "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/0e/c2/e7/yi-jing.jpg?w=600&h=400&s=1",
+          "https://media.houseandgarden.co.uk/photos/64bf9f4e54c3ba0222559f4e/16:9/w_2000,h_1125,c_limit/6268272cd492cf56510d62c7_Laser_Wolf_Brooklyn_Interior_01-min.png",
+          "https://img.freepik.com/free-photo/top-view-table-full-food_23-2149209253.jpg?semt=ais_hybrid&w=740",
+          "https://media.istockphoto.com/id/535786572/photo/grilled-striploin-steak.jpg?s=612x612&w=0&k=20&c=F_vrvwIOWe3vBR2y16Dp4z6d46K1sIY3togU3VYjrpA="
+        ]}
       />
         {/* Signature Experiences Section with enhanced UI/UX */}
       <SignatureExperiences />
@@ -382,24 +389,21 @@ const Home = () => {
               </Button>
             </div>
             
-            <div className="flex justify-center items-center gap-6">
-              <div className="text-cream">
+            <div className="flex justify-center items-center gap-6">              <div className="text-cream">
                 <div className="font-medium">Opening Hours:</div>
-                <div className="text-cream/70 text-sm">Tue-Sun 5PM - 11PM</div>
+                <div className="text-cream/70 text-sm">All Days 5:30AM - 11:30PM</div>
               </div>
               
               <div className="h-8 w-px bg-amber-600/30"></div>
-              
-              <div className="text-cream">
+                <div className="text-cream">
                 <div className="font-medium">Phone:</div>
-                <div className="text-cream/70 text-sm">+1 (555) 123-4567</div>
+                <div className="text-cream/70 text-sm">+91 9885321957</div>
               </div>
               
               <div className="h-8 w-px bg-amber-600/30"></div>
-              
-              <div className="text-cream">
+                <div className="text-cream">
                 <div className="font-medium">Location:</div>
-                <div className="text-cream/70 text-sm">123 Gourmet St, New York</div>
+                <div className="text-cream/70 text-sm">Rama Rao Peta, Kakinada</div>
               </div>
             </div>
           </motion.div>

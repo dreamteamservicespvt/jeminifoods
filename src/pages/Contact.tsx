@@ -68,16 +68,15 @@ const Contact = () => {
     
     fetchOpeningHours();
   }, []);
-  
-  // Generate fallback hours
+    // Generate fallback hours
   const fallbackHours: OpeningHour[] = [
-    { day: 'Monday', hours: 'Closed', isToday: isToday('Monday') },
-    { day: 'Tuesday', hours: '5:00 PM - 10:00 PM', isToday: isToday('Tuesday') },
-    { day: 'Wednesday', hours: '5:00 PM - 10:00 PM', isToday: isToday('Wednesday') },
-    { day: 'Thursday', hours: '5:00 PM - 10:00 PM', isToday: isToday('Thursday') },
-    { day: 'Friday', hours: '5:00 PM - 11:00 PM', isToday: isToday('Friday') },
-    { day: 'Saturday', hours: '5:00 PM - 11:00 PM', isToday: isToday('Saturday') },
-    { day: 'Sunday', hours: '5:00 PM - 9:00 PM', isToday: isToday('Sunday') },
+    { day: 'Monday', hours: '5:30 AM - 11:30 PM', isToday: isToday('Monday') },
+    { day: 'Tuesday', hours: '5:30 AM - 11:30 PM', isToday: isToday('Tuesday') },
+    { day: 'Wednesday', hours: '5:30 AM - 11:30 PM', isToday: isToday('Wednesday') },
+    { day: 'Thursday', hours: '5:30 AM - 11:30 PM', isToday: isToday('Thursday') },
+    { day: 'Friday', hours: '5:30 AM - 11:30 PM', isToday: isToday('Friday') },
+    { day: 'Saturday', hours: '5:30 AM - 11:30 PM', isToday: isToday('Saturday') },
+    { day: 'Sunday', hours: '5:30 AM - 11:30 PM', isToday: isToday('Sunday') },
   ];
   
   // Check if day is today
@@ -268,12 +267,11 @@ const Contact = () => {
                       : 'bg-gradient-to-br from-amber-500 to-amber-700'
                   }`}>
                     <MapPin className="text-black" size={20} />
-                  </div>
-                  <div className="space-y-1">
+                  </div>                  <div className="space-y-1">
                     <p className="text-amber-300 font-medium">Address</p>
-                    <p className="text-cream">123 Gourmet Street</p>
-                    <p className="text-cream">Fine Dining District</p>
-                    <p className="text-cream">New York, NY 10001</p>
+                    <p className="text-cream">Jemini Foods</p>
+                    <p className="text-cream">Rama Rao Peta</p>
+                    <p className="text-cream">Kakinada, Andhra Pradesh 533004</p>
                   </div>
                 </motion.div>
                 
@@ -289,10 +287,9 @@ const Contact = () => {
                       : 'bg-gradient-to-br from-amber-500 to-amber-700'
                   }`}>
                     <Phone className="text-black" size={20} />
-                  </div>
-                  <div className="space-y-1">
+                  </div>                  <div className="space-y-1">
                     <p className="text-amber-300 font-medium">Telephone</p>
-                    <p className="text-cream">+1 (555) 123-4567</p>
+                    <p className="text-cream">+91 9885321957</p>
                     <p className="text-cream/70 text-sm">For reservations and inquiries</p>
                   </div>
                 </motion.div>
@@ -309,10 +306,9 @@ const Contact = () => {
                       : 'bg-gradient-to-br from-amber-500 to-amber-700'
                   }`}>
                     <Mail className="text-black" size={20} />
-                  </div>
-                  <div className="space-y-1">
+                  </div>                  <div className="space-y-1">
                     <p className="text-amber-300 font-medium">Email</p>
-                    <p className="text-cream">info@jeminifoods.com</p>
+                    <p className="text-cream">Jeminifoodskkd@gmail.com</p>
                     <p className="text-cream/70 text-sm">We'll respond within 24 hours</p>
                   </div>
                 </motion.div>
@@ -331,40 +327,45 @@ const Contact = () => {
                     <Clock className="text-black" size={20} />
                   </div>
                   <div>
-                    <p className="text-amber-300 font-medium mb-2">Opening Hours</p>
-                    <div className="space-y-2">
-                      {openingHours.map((hour, index) => (
-                        <div 
-                          key={index} 
-                          className={`flex justify-between ${hour.isToday ? 'text-amber-400 font-medium' : 'text-cream'}`}
-                        >
-                          <span>{hour.day}</span>
-                          <span>{hour.hours}</span>
-                        </div>
-                      ))}
+                    <p className="text-amber-300 font-medium mb-2">Opening Hours</p>                    <div className="space-y-2">
+                      <div className="flex justify-between text-cream">
+                        <span>All Days</span>
+                        <span>5:30 AM - 11:30 PM</span>
+                      </div>
+                      <div className="flex justify-between text-cream">
+                        <span>Weekend Hours</span>
+                        <span>5:30 AM - 11:30 PM</span>
+                      </div>
+                      <div className="flex justify-between text-cream">
+                        <span>Holiday Hours</span>
+                        <span>5:30 AM - 11:30 PM</span>
+                      </div>
+                      <div className="flex justify-between text-amber-400 font-medium">
+                        <span>Special Events</span>
+                        <span>By Reservation</span>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
               </div>
             </motion.div>
             
-            {/* Google Map */}
-            <motion.div
+            {/* Google Map */}            <motion.div
               ref={mapRef}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
               className="rounded-xl overflow-hidden border border-amber-600/30 h-80 shadow-xl relative group"
               whileHover={{ boxShadow: '0 25px 50px -12px rgba(245, 158, 11, 0.25)' }}
-            >
-              <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d193595.25279998326!2d-74.11976364143697!3d40.70583158621368!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c24fa5d33f083b%3A0xc80b8f06e177fe62!2sNew%20York%2C%20NY%2C%20USA!5e0!3m2!1sen!2s!4v1644613146392!5m2!1sen!2s"
+            >              <iframe 
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3856.0520759022083!2d82.23150557520081!3d16.95983858385624!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a3829de87044203%3A0x9fb6d7370920e536!2sJEMINI%20TIFFIN!5e1!3m2!1sen!2sin!4v1750575887359!5m2!1sen!2sin"
                 width="100%"
                 height="100%"
                 style={{ border: 0, filter: 'grayscale(1) contrast(1.2) opacity(0.8)' }}
                 allowFullScreen
                 loading="lazy"
                 title="Restaurant Location"
+                referrerPolicy="no-referrer-when-downgrade"
                 className="transition-all duration-500 group-hover:filter-none"
               ></iframe>
               

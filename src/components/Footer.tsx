@@ -89,26 +89,23 @@ const Footer = () => {
                 <div className="flex items-start space-x-3">
                   <div className="p-2 rounded-full bg-gradient-to-br from-amber-600/20 to-amber-600/5 flex-shrink-0">
                     <MapPin className="text-amber-400" size={16} />
-                  </div>
-                  <div className="text-cream">
-                    <p>123 Gourmet Street</p>
-                    <p>Fine Dining District</p>
-                    <p>New York, NY 10001</p>
+                  </div>                  <div className="text-cream">
+                    <p>Jemini Foods</p>
+                    <p>Rama Rao Peta</p>
+                    <p>Kakinada, Andhra Pradesh 533004</p>
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3">
                   <div className="p-2 rounded-full bg-gradient-to-br from-amber-600/20 to-amber-600/5 flex-shrink-0">
                     <Phone className="text-amber-400" size={16} />
                   </div>
-                  <p className="text-cream">+1 (555) 123-4567</p>
+                  <p className="text-cream">+91 9885321957</p>
                 </div>
-                
-                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3">
                   <div className="p-2 rounded-full bg-gradient-to-br from-amber-600/20 to-amber-600/5 flex-shrink-0">
                     <Mail className="text-amber-400" size={16} />
                   </div>
-                  <p className="text-cream">hello@jeminifoods.com</p>
+                  <p className="text-cream">Jeminifoodskkd@gmail.com</p>
                 </div>
               </div>
             </motion.div>
@@ -121,30 +118,29 @@ const Footer = () => {
               className="space-y-6"
             >
               <h3 className="text-xl font-semibold bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent">Opening Hours</h3>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
+              <div className="space-y-3">                <div className="flex items-center space-x-3">
                   <div className="p-2 rounded-full bg-gradient-to-br from-amber-600/20 to-amber-600/5 flex-shrink-0">
                     <Clock className="text-amber-400" size={16} />
                   </div>
                   <div className="text-cream">
-                    <p className="font-medium">Tuesday - Thursday</p>
-                    <p className="text-cream/80">5:00 PM - 10:00 PM</p>
+                    <p className="font-medium">All Days</p>
+                    <p className="text-cream/80">5:30 AM - 11:30 PM</p>
                   </div>
                 </div>
                 
                 <div className="text-cream ml-9">
-                  <p className="font-medium">Friday - Saturday</p>
-                  <p className="text-cream/80">5:00 PM - 11:00 PM</p>
+                  <p className="font-medium">Weekend Hours</p>
+                  <p className="text-cream/80">5:30 AM - 11:30 PM</p>
                 </div>
                 
                 <div className="text-cream ml-9">
-                  <p className="font-medium">Sunday</p>
-                  <p className="text-cream/80">4:00 PM - 9:00 PM</p>
+                  <p className="font-medium">Holiday Hours</p>
+                  <p className="text-cream/80">5:30 AM - 11:30 PM</p>
                 </div>
                 
                 <div className="text-cream ml-9">
-                  <p className="font-medium text-amber-400">Monday</p>
-                  <p className="text-cream/80">Closed</p>
+                  <p className="font-medium text-amber-400">Special Events</p>
+                  <p className="text-cream/80">By Reservation</p>
                 </div>
               </div>
             </motion.div>
