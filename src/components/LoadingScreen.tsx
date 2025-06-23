@@ -43,7 +43,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
               className="mb-8"
             >
               <h1 className="text-6xl font-serif text-amber-400 mb-4 tracking-wider">
-                GEMINI
+                JEMINI
               </h1>
               <div className="h-px w-32 bg-gradient-to-r from-transparent via-amber-400 to-transparent mx-auto mb-4"></div>
               <p className="text-amber-200 text-lg tracking-widest">KAKINADA</p>

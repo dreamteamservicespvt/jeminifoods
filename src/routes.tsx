@@ -5,7 +5,7 @@ import { useUserAuthOnly } from './contexts/MultiAuthContext';
 // Import all pages
 import Home from "./pages/Home";
 import Menu from "./pages/Menu";
-import Gallery from "./pages/Gallery";
+import Gallery from "./pages/Gallery.tsx";
 import Reservations from "./pages/Reservations";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -20,6 +20,9 @@ import ChefDashboard from './pages/chef/ChefDashboard';
 import NotFound from "./pages/NotFound";
 import PreOrders from "./pages/PreOrders";
 import MultiSessionDemo from "./pages/MultiSessionDemo";
+import Excellence from "./pages/Excellence";
+import Cuisine from "./pages/Cuisine";
+import ExperiencePage from "./pages/Experience";
 
 // Import components
 import Navigation from './components/Navigation';
@@ -71,6 +74,9 @@ const AppRoutes = () => {
               <Route path="/contact" element={<Contact />} />
               <Route path="/dashboard" element={<UserDashboard />} />
               <Route path="/multi-session-demo" element={<MultiSessionDemo />} />
+              <Route path="/excellence" element={<Excellence />} />
+              <Route path="/cuisine" element={<Cuisine />} />
+              <Route path="/experience" element={<ExperiencePage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
