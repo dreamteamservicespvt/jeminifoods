@@ -4,7 +4,7 @@ import { db } from '../lib/firebase';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { Filter, Star, Utensils, ChevronRight, Gift, Clock, Coffee, 
          Leaf, Flame, Search, ChevronsDown, Sparkles, Salad, Heart, 
-         ShoppingBag, Eye, ArrowUpRight, Zap, Plus, Users, Award } from 'lucide-react';
+         ShoppingBag, Eye, ArrowUpRight, Zap, Plus, Users, Award, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -313,8 +313,7 @@ const Menu = () => {  // State
     return categoryConfig[selectedCategory as keyof typeof categoryConfig] || 
            categoryConfig.all;
   };
-  
-  // Render dietary tags for menu items
+    // Render dietary tags for menu items - enhanced for mobile
   const renderDietaryTags = (dietaryArray?: string[]) => {
     if (!dietaryArray || dietaryArray.length === 0) return null;
     
@@ -328,7 +327,12 @@ const Menu = () => {  // State
             <Badge 
               key={tag}
               variant="outline"
-              className={cn("text-xs px-2 py-0 h-5 font-normal", dietaryInfo.color)}
+              className={cn(
+                isMobile 
+                  ? "text-[10px] px-1.5 py-0 h-4 font-normal" 
+                  : "text-xs px-2 py-0 h-5 font-normal", 
+                dietaryInfo.color
+              )}
             >
               {dietaryInfo.icon}
               <span className="ml-1">{dietaryInfo.label}</span>
@@ -528,11 +532,10 @@ const Menu = () => {  // State
             </div>
           </motion.div>
         </div>
-      </motion.div>
-        {/* Filter Bar */}
+      </motion.div>      {/* Filter Bar - reduced vertical spacing for mobile */}
       <div 
         ref={filterBarRef}
-        className="py-6 md:py-8 bg-charcoal/95 backdrop-blur-sm relative z-20 border-t border-amber-600/10"
+        className="py-3 md:py-8 bg-charcoal/95 backdrop-blur-sm relative z-20 border-t border-amber-600/10"
       >
         {/* Sticky Filter Bar */}
         <div 
@@ -541,10 +544,9 @@ const Menu = () => {  // State
             "transition-all duration-300",
             scrolledPast && !filterBarInView ? "opacity-100" : "opacity-0 pointer-events-none"
           )}
-        >
-          <div 
+        >          <div 
             className={cn(
-              "fixed top-0 left-0 right-0 bg-black/95 backdrop-blur-xl border-b border-amber-600/20 py-3 px-4 sm:px-6 z-50 transition-transform duration-300 shadow-lg",
+              "fixed top-0 left-0 right-0 bg-black/95 backdrop-blur-xl border-b border-amber-600/20 py-2 px-3 sm:px-6 z-50 transition-transform duration-300 shadow-lg",
               scrolledPast && !filterBarInView ? "translate-y-0" : "-translate-y-full"
             )}
           >
@@ -553,8 +555,8 @@ const Menu = () => {  // State
                 {getCurrentCategory().title}
               </h2>
               
-              {/* Mobile & Desktop Category Pills */}
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 max-w-[60vw] sm:max-w-[70vw] md:max-w-none">
+              {/* Mobile & Desktop Category Pills - modernized */}
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 max-w-[75vw] sm:max-w-[70vw] md:max-w-none">
                 {categories.map((category) => {
                   const categoryInfo = categoryConfig[category as keyof typeof categoryConfig] || categoryConfig.all;
                   
@@ -562,17 +564,16 @@ const Menu = () => {  // State
                     <motion.button
                       key={category}
                       onClick={() => handleCategoryChange(category)}
-                      whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       className={cn(
-                        "px-3 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm font-medium rounded-full transition-all duration-300 flex items-center gap-1.5 border",
+                        "px-3 sm:px-4 py-1.5 whitespace-nowrap text-xs sm:text-sm font-medium rounded-full transition-all duration-200 flex items-center gap-1.5",
                         selectedCategory === category
-                          ? "bg-amber-600 text-black border-amber-600 shadow-lg shadow-amber-600/25"
-                          : "bg-black/40 text-cream border-cream/20 hover:bg-amber-600/20 hover:border-amber-600/40"
+                          ? "bg-amber-600 text-black shadow-sm"
+                          : "bg-black/40 text-cream/90 border border-cream/10 hover:bg-amber-600/20 hover:border-amber-600/40"
                       )}
                     >
                       <span className="text-xs sm:text-sm">{categoryInfo.icon}</span>
-                      <span className="capitalize font-medium">
+                      <span className="font-medium">
                         {categoryInfo.title}
                       </span>
                     </motion.button>
@@ -601,11 +602,99 @@ const Menu = () => {  // State
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-amber-400 mb-4 text-center md:text-left">
               {getCurrentCategory().title}
             </h2>
-            <p className="text-cream/80 text-center md:text-left mb-6 max-w-2xl">
+              {/* Mobile-optimized search bar - flat and prominent */}
+            <div className="relative mb-3 md:hidden">
+              <Search size={18} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-amber-400" />
+              <Input
+                type="text"
+                placeholder="Search dishes or ingredients..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-11 pr-10 py-3 h-12 bg-black/30 border-amber-600/20 text-cream rounded-lg shadow-sm focus:ring-1 focus:ring-amber-400 text-base w-full"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-amber-600/10 rounded-full w-7 h-7 flex items-center justify-center text-amber-400"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            
+            {/* Results count - small label styled as a tag */}
+            <div className="flex justify-between items-center mb-3 md:hidden">
+              <p className="text-cream/80 text-sm">
+                {getCurrentCategory().description}
+              </p>
+              {searchQuery && (
+                <div className="text-xs bg-amber-600/10 text-amber-400 px-2 py-1 rounded-full">
+                  {filteredItems.length} {filteredItems.length === 1 ? 'dish' : 'dishes'} found
+                </div>
+              )}
+            </div>
+            
+            <p className="text-cream/80 text-center md:text-left mb-4 max-w-2xl hidden md:block text-sm md:text-base">
               {getCurrentCategory().description}
-            </p>            
-            {/* Enhanced Category Pills */}
-            <div className="flex flex-wrap justify-center md:justify-start gap-3 mb-6">
+            </p>
+            
+            {/* Mobile-optimized pill-shaped category filters */}
+            <div className="flex overflow-x-auto py-1 hide-scrollbar gap-2.5 md:hidden mb-4">
+              {categories.map((category) => {
+                const categoryInfo = categoryConfig[category as keyof typeof categoryConfig] || categoryConfig.all;
+                
+                return (
+                  <motion.button
+                    key={category}
+                    onClick={() => handleCategoryChange(category)}
+                    whileTap={{ scale: 0.95 }}
+                    className={cn(
+                      "px-4 py-2 rounded-full whitespace-nowrap flex items-center gap-2 flex-shrink-0 shadow-sm",
+                      selectedCategory === category
+                        ? "bg-amber-600 text-black font-medium"
+                        : "bg-black/20 border border-cream/10 text-cream/90"
+                    )}
+                  >
+                    {React.cloneElement(categoryInfo.icon, {
+                      className: "w-4 h-4"
+                    })}
+                    <span>{categoryInfo.title}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+            
+            {/* Redesigned dietary filters - horizontal scroll chips for mobile */}
+            {getAvailableDietaryFilters().length > 0 && (
+              <div className="flex overflow-x-auto py-1 hide-scrollbar gap-2 md:hidden mb-4">
+                {getAvailableDietaryFilters().map(tag => {
+                  const dietaryInfo = dietaryTags[tag as keyof typeof dietaryTags];
+                  if (!dietaryInfo) return null;
+                  
+                  return (
+                    <motion.button
+                      key={tag}
+                      onClick={() => handleDietaryChange(tag)}
+                      whileTap={{ scale: 0.95 }}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full flex-shrink-0 flex items-center gap-1.5 text-xs font-medium",
+                        selectedDietary === tag
+                          ? "bg-amber-600/20 border border-amber-600/40 text-amber-400"
+                          : "bg-black/10 border border-cream/10 text-cream/80"
+                      )}
+                    >
+                      {React.cloneElement(dietaryInfo.icon, {
+                        className: "w-3.5 h-3.5"
+                      })}
+                      <span>{dietaryInfo.label}</span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* Desktop view - original category cards layout */}
+            <div className="hidden md:flex flex-wrap justify-center md:justify-start gap-3 mb-6">
               {categories.map((category) => {
                 const categoryInfo = categoryConfig[category as keyof typeof categoryConfig] || categoryConfig.all;
                 const itemCount = category === 'all' ? menuItems.length :
@@ -664,9 +753,8 @@ const Menu = () => {  // State
             </div>
           </div>
           
-          {/* Search and Dietary Filters */}
-          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start lg:items-center mb-6">            {/* Enhanced Search Bar */}
-            <div className="relative flex-1 max-w-lg">
+          {/* Search and Dietary Filters */}          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start lg:items-center mb-6">            {/* Enhanced Search Bar - Desktop only */}
+            <div className="relative flex-1 max-w-lg hidden md:block">
               <motion.div
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 text-amber-400"
                 animate={{ 
@@ -742,9 +830,8 @@ const Menu = () => {  // State
               </div>
             )}
           </div>
-          
-          {/* Results Summary */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 py-4 px-4 bg-black/20 backdrop-blur-sm rounded-xl border border-amber-600/10">
+            {/* Results Summary - Desktop only */}
+          <div className="hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 py-4 px-4 bg-black/20 backdrop-blur-sm rounded-xl border border-amber-600/10">
             <div className="text-cream/80">
               <span className="text-lg font-semibold text-amber-400">{filteredItems.length}</span>
               <span className="ml-2">
@@ -772,20 +859,40 @@ const Menu = () => {  // State
               </Button>
             )}
           </div>
+            {/* Mobile Clear Filters button - redesigned for better visibility and touch target */}
+          {(selectedCategory !== 'all' || selectedDietary || searchQuery) && (
+            <div className="md:hidden mb-5">
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  setSelectedCategory('all');
+                  setSelectedDietary(null);
+                  setSearchQuery('');
+                }}
+                className="flex items-center justify-center gap-2 bg-amber-600/10 border border-amber-600/20 text-amber-400 font-medium py-2 px-4 h-10 rounded-lg w-full shadow-sm"
+              >
+                <X size={16} />
+                Clear all filters
+              </motion.button>
+            </div>
+          )}
         </div>
-      </div>
-        {/* Menu Items Grid */}
-      <div className="container mx-auto px-4 sm:px-6 pb-20">
-        <AnimatePresence mode="wait">
+      </div>        {/* Menu Items Grid - optimized spacing for mobile */}
+      <div className="container mx-auto px-3 sm:px-6 pb-16 md:pb-20">        <AnimatePresence mode="wait">
           <motion.div
             key={`${selectedCategory}-${selectedDietary}-${searchQuery}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.4 }}
+            transition={{ 
+              duration: 0.3, 
+              type: "spring", 
+              stiffness: 300, 
+              damping: 25 
+            }}
           >
             {filteredItems.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
                 {filteredItems.map((item, index) => {
                   const isExpanded = expandedItem === item.id;
                   
@@ -949,16 +1056,17 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
         y: -8, 
         scale: 1.02,
         transition: { duration: 0.3, type: "spring", stiffness: 400 } 
-      } : {}}
-      layout
+      } : {}}      layout
       onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}      className={cn(
+      onHoverEnd={() => setIsHovered(false)}      
+      className={cn(
         "group relative bg-gradient-to-br from-black/70 via-black/50 to-black/70 backdrop-blur-lg",
-        "border border-amber-600/30 rounded-3xl overflow-hidden",
-        "transition-all duration-500 ease-out cursor-pointer",
-        "hover:border-amber-600/50 hover:shadow-2xl hover:shadow-amber-600/20",
+        "border border-amber-600/30 overflow-hidden",
+        "transition-all duration-300 ease-out cursor-pointer",
+        "hover:border-amber-600/50 hover:shadow-xl hover:shadow-amber-600/20",
         "active:scale-[0.98] touch-manipulation",
         "focus:outline-none focus:ring-2 focus:ring-amber-400/50",
+        isMobile ? "rounded-2xl" : "rounded-3xl", 
         isExpanded && "col-span-full lg:col-span-2 xl:col-span-3 row-span-2"
       )}
       onClick={() => !isExpanded && onExpand()}
@@ -1002,11 +1110,10 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
           imageUrl: item.image
         }}
         className={item.featured || item.specialOffer ? "top-14 right-3" : ""}
-      />
-        {/* Image Section */}
+      />      {/* Image Section - optimized for mobile */}
       <div className={cn(
         "relative overflow-hidden",
-        isExpanded ? "h-80 sm:h-96" : "h-52 sm:h-64"
+        isExpanded ? "h-80 sm:h-96" : isMobile ? "h-48" : "h-52 sm:h-64"
       )}>
         {item.image ? (
           <>
@@ -1021,16 +1128,16 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
               layoutId={`image-${item.id}`}
               onLoad={() => setImageLoaded(true)}
               className={cn(
-                "w-full h-full object-cover transition-all duration-700",
+                "w-full h-full object-cover transition-all duration-500",
                 imageLoaded ? "opacity-100" : "opacity-0",
-                isHovered && !isExpanded && "scale-110"
+                isHovered && !isExpanded && "scale-105"
               )}
             />
           </>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-charcoal/80 to-black/60 flex items-center justify-center">
             <div className="text-center">
-              <Utensils className="text-amber-400/40 mx-auto mb-2" size={isExpanded ? 64 : 48} />
+              <Utensils className="text-amber-400/40 mx-auto mb-2" size={isExpanded ? 64 : isMobile ? 40 : 48} />
               <p className="text-amber-400/60 text-sm font-medium">{item.name}</p>
             </div>
           </div>
@@ -1039,18 +1146,21 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
         {/* Enhanced gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
         
-        {/* Enhanced price display */}
-        <div className="absolute bottom-4 left-4 right-4 z-10">
+        {/* Enhanced price display - streamlined for mobile */}
+        <div className="absolute bottom-3 left-3 right-3 z-10">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="bg-black/90 backdrop-blur-md rounded-2xl px-4 py-3 border border-amber-600/40"
+            className={cn(
+              "backdrop-blur-md border border-amber-600/30",
+              isMobile ? "bg-black/80 rounded-xl px-3 py-2" : "bg-black/90 rounded-2xl px-4 py-3"
+            )}
           >
             {item.variations ? (
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="text-amber-400 font-bold text-xl">
+                  <div className={cn("text-amber-400 font-bold", isMobile ? "text-lg" : "text-xl")}>
                     {formatPrice(item.variations[0].price)}
                   </div>
                   <div className="text-cream/60 text-xs font-medium">
@@ -1068,7 +1178,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
               </div>
             ) : (
               <div className="flex justify-between items-center">
-                <div className="text-amber-400 font-bold text-xl">
+                <div className={cn("text-amber-400 font-bold", isMobile ? "text-lg" : "text-xl")}>
                   {formatPrice(item.price)}
                 </div>
                 <div className="text-cream/60 text-xs font-medium">
@@ -1076,10 +1186,13 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                 </div>
               </div>
             )}
-          </motion.div>        </div>
-          {/* Enhanced Expand/View Details Button */}
+          </motion.div>        
+        </div>          {/* Enhanced Expand/View Details Button - larger touch target for mobile */}
         <motion.div
-          className="absolute bottom-4 right-4 z-10"
+          className={cn(
+            "absolute z-10",
+            isMobile ? "bottom-3 right-3" : "bottom-4 right-4"
+          )}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
         >
@@ -1089,7 +1202,11 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
               e.stopPropagation();
               onExpand();
             }}
-            className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black border-none rounded-full w-12 h-12 p-0 shadow-xl backdrop-blur-sm transition-all duration-300"
+            className={cn(
+              "bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400", 
+              "text-black border-none rounded-full shadow-xl backdrop-blur-sm transition-all duration-300 p-0",
+              isMobile ? "w-10 h-10" : "w-12 h-12"
+            )}
           >
             {isExpanded ? (
               <motion.div
@@ -1097,27 +1214,30 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
                 animate={{ rotate: 45 }}
                 transition={{ duration: 0.2 }}
               >
-                <Plus className="w-5 h-5" />
+                <Plus className={cn(isMobile ? "w-4 h-4" : "w-5 h-5")} />
               </motion.div>
             ) : (
-              <Eye className="w-5 h-5" />
+              <Eye className={cn(isMobile ? "w-4 h-4" : "w-5 h-5")} />
             )}
           </Button>
         </motion.div>
       </div>
-      
-      {/* Enhanced Content Section */}
+        {/* Enhanced Content Section - optimized for mobile */}
       <div className={cn(
-        "p-5 sm:p-6",
+        isMobile ? "p-4" : "p-5 sm:p-6",
         isExpanded && "pb-8"
       )}>
         {/* Title and Basic Info */}
-        <div className="mb-4">
+        <div className={cn("mb-3", isMobile ? "mt-1" : "")}>
           <motion.h3 
             layoutId={`title-${item.id}`}
             className={cn(
-              "font-bold text-amber-400 transition-colors leading-tight mb-3",
-              isExpanded ? "text-2xl sm:text-3xl" : "text-lg sm:text-xl"
+              "font-bold text-amber-400 transition-colors leading-tight mb-2",
+              isExpanded 
+                ? "text-2xl sm:text-3xl" 
+                : isMobile 
+                  ? "text-base" 
+                  : "text-lg sm:text-xl"
             )}
           >
             {item.name}
@@ -1126,17 +1246,24 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
           <motion.p 
             layoutId={`desc-${item.id}`}
             className={cn(
-              "text-cream/90 leading-relaxed",
-              isExpanded ? "text-base" : "text-sm line-clamp-2"
+              "leading-relaxed",
+              isExpanded 
+                ? "text-base text-cream/90" 
+                : isMobile
+                  ? "text-xs text-cream/80 line-clamp-2"
+                  : "text-sm text-cream/90 line-clamp-2"
             )}
           >
             {item.description}
           </motion.p>
-            {/* Category badge */}
-          <motion.div className="mt-3">
+            {/* Category badge - smaller on mobile */}
+          <motion.div className="mt-2">
             <Badge 
               variant="outline" 
-              className="bg-amber-600/10 border-amber-600/30 text-amber-400 text-xs px-3 py-1"
+              className={cn(
+                "bg-amber-600/10 border-amber-600/30 text-amber-400 px-2",
+                isMobile ? "text-[10px] py-0.5" : "text-xs py-1"
+              )}
             >
               {item.category}
             </Badge>
