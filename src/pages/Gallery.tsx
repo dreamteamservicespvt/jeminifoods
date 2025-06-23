@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, Image, Video, Film, X, PlayCircle, Eye, Calendar, Tag,
-  ChevronLeft, ChevronRight, Play, Pause, Download, ExternalLink
+  ChevronLeft, ChevronRight, Play, Pause, Download, ExternalLink,
+  SlidersHorizontal, Filter, ChevronDown, Heart
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,8 +14,17 @@ import { useDebouncedCallback } from 'use-debounce';
 import { collection, onSnapshot, query, orderBy, where, limit, getDocs, startAfter, doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { GalleryItem, MediaCategory, GalleryFilter, CATEGORY_LABELS } from '../types/gallery';
+import { useFavorites } from '../hooks/useFavorites';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import FavoriteButton from '../components/favorites/FavoriteButton';
+import '../styles/gallery-animations.css';
 
 // Define the missing MediaType enum
 enum MediaType {
@@ -31,6 +41,7 @@ const Gallery = () => {
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const { favorites, loading: favoritesLoading, isFavorite, addFavorite, removeFavorite, getFavoriteId } = useFavorites();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const { ref: inViewRef, inView: isLoadMoreVisible } = useInView();
   
@@ -46,16 +57,21 @@ const Gallery = () => {
   );
   
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  
-  // Filters
+  const [isPlaying, setIsPlaying] = useState(false);  const videoRef = useRef<HTMLVideoElement>(null);
+    // Filters
   const [filters, setFilters] = useState<GalleryFilter>({
     category: 'all',
     searchQuery: '',
     sortBy: 'recent',
     sortDirection: 'desc'
   });
+
+  // UI state for modern filters
+  const [showSearch, setShowSearch] = useState(false);
+  const [isFilterActive, setIsFilterActive] = useState(false);
+
+  // Check if any filters are active
+  const hasActiveFilters = filters.category !== 'all' || filters.searchQuery !== '' || filters.sortBy !== 'recent';
 
   // Skeleton placeholder items
   const skeletonItems = Array(ITEMS_PER_PAGE).fill(0);
@@ -270,83 +286,41 @@ const Gallery = () => {
       link.click();
       document.body.removeChild(link);
     }
-  };
+  };  // Empty state component
+  const EmptyGalleryState = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="col-span-full flex flex-col items-center justify-center py-16 px-4"
+    >
+      <div className="w-24 h-24 rounded-full bg-amber-600/10 flex items-center justify-center mb-6">
+        <Image size={40} className="text-amber-400/50" />
+      </div>
+      <h3 className="text-2xl font-semibold text-amber-400 mb-2">No Images Found</h3>
+      <p className="text-cream/70 text-center max-w-md mb-6">
+        {filters.category !== 'all' || filters.searchQuery 
+          ? 'Try adjusting your filters or search terms to find what you\'re looking for.'
+          : 'Gallery images will appear here once they\'re uploaded.'}
+      </p>
+      <Button
+        variant="outline"
+        className="border-amber-600/30 text-amber-400"
+        onClick={() => setFilters({
+          category: 'all',
+          searchQuery: '',
+          sortBy: 'recent',
+          sortDirection: 'desc'
+        })}
+      >
+        Clear Filters
+      </Button>
+    </motion.div>
+  );
 
-  // Fallback images if no gallery items
-  const fallbackImages = [
-    {
-      id: 'fallback1',
-      url: 'https://images.unsplash.com/photo-1551218808-94e220e084d2?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-      title: 'Elegant Dining Room',
-      description: 'Our sophisticated main dining area',
-      type: 'image' as MediaType,
-      category: 'interior' as MediaCategory,
-      tags: ['dining', 'interior', 'elegant'],
-      uploadedAt: new Date(),
-      views: 0
-    },
-    {
-      id: 'fallback2',
-      url: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-      title: 'Culinary Excellence',
-      description: 'Artfully crafted dishes',
-      type: 'image' as MediaType,
-      category: 'food' as MediaCategory,
-      tags: ['food', 'gourmet', 'culinary'],
-      uploadedAt: new Date(),
-      views: 0
-    },
-    {
-      id: 'fallback3',
-      url: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-      title: 'Intimate Atmosphere',
-      description: 'Perfect for special occasions',
-      type: 'image' as MediaType,
-      category: 'interior' as MediaCategory,
-      tags: ['ambiance', 'interior', 'romantic'],
-      uploadedAt: new Date(),
-      views: 0
-    },
-    {
-      id: 'fallback4',
-      url: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-      title: 'Wine Selection',
-      description: 'Curated from around the world',
-      type: 'image' as MediaType,
-      category: 'food' as MediaCategory,
-      tags: ['wine', 'beverages', 'gourmet'],
-      uploadedAt: new Date(),
-      views: 0
-    },
-    {
-      id: 'fallback5',
-      url: 'https://images.unsplash.com/photo-1424847651672-bf20a4b0982b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-      title: 'Chef\'s Presentation',
-      description: 'Artistry on every plate',
-      type: 'image' as MediaType,
-      category: 'food' as MediaCategory,
-      tags: ['chef', 'food', 'gourmet'],
-      uploadedAt: new Date(),
-      views: 0
-    },
-    {
-      id: 'fallback6',
-      url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-      title: 'Private Dining',
-      description: 'Exclusive experiences',
-      type: 'image' as MediaType,
-      category: 'events' as MediaCategory,
-      tags: ['events', 'private', 'exclusive'],
-      uploadedAt: new Date(),
-      views: 0
-    }
-  ];
-
-  const displayItems = (galleryItems.length > 0 || isLoading) ? galleryItems : fallbackImages;
-
+  const displayItems = galleryItems;
   return (
-    <div className="min-h-screen bg-charcoal pt-20 overflow-x-hidden">      {/* Advanced Hero Section with Parallax and Animation */}
-      <div className="relative h-[50vh] md:h-[60vh] overflow-hidden">
+    <div className="min-h-screen bg-charcoal pt-20 overflow-x-hidden custom-scrollbar">
+      {/* Enhanced Hero Section with Parallax and Animation */}      <div className="relative h-[50vh] md:h-[60vh] lg:h-[65vh] overflow-hidden">
         <div className="absolute inset-0 z-0">
           <motion.div 
             initial={{ scale: 1.2 }}
@@ -354,29 +328,34 @@ const Gallery = () => {
             transition={{ duration: 5 }}
             className="w-full h-full"
           >
-            <img 
-              src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2000&q=80"
-              alt="Fine dining experience gallery"
-              className="w-full h-full object-cover brightness-125 contrast-105"
-            />
+            {/* Dynamic hero background using first gallery item if available */}
+            {galleryItems.length > 0 && galleryItems[0].type === 'image' ? (
+              <img 
+                src={galleryItems[0].url}
+                alt="Gallery featured image"
+                className="w-full h-full object-cover brightness-125 contrast-105"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-amber-900/30 via-charcoal to-black/80" />
+            )}
           </motion.div>
           
-          {/* Dynamic lighting effects */}
+          {/* Enhanced Dynamic lighting effects */}
           <motion.div 
             initial={{ opacity: 0.8 }}
             animate={{ opacity: 0.6 }}
-            transition={{ duration: 3, repeat: Infinity, repeatType: "reverse" }}
-            className="absolute inset-0 bg-gradient-to-r from-amber-900/30 via-transparent to-amber-900/30"
+            transition={{ duration: 4, repeat: Infinity, repeatType: "reverse" }}
+            className="absolute inset-0 bg-gradient-to-r from-amber-900/40 via-transparent to-amber-900/40"
           ></motion.div>
           
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-charcoal/40 to-charcoal"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-charcoal/50 to-charcoal"></div>
           
-          {/* Floating particles */}
-          <div className="absolute inset-0 opacity-30">
-            {Array.from({ length: 20 }).map((_, i) => (
+          {/* Enhanced Floating particles */}
+          <div className="absolute inset-0 opacity-40">
+            {Array.from({ length: 15 }).map((_, i) => (
               <motion.div
                 key={i}
-                className="absolute w-2 h-2 rounded-full bg-amber-400"
+                className="absolute w-1.5 h-1.5 rounded-full bg-amber-400 shadow-lg shadow-amber-400/50"
                 initial={{ 
                   x: `${Math.random() * 100}%`, 
                   y: `${Math.random() * 100}%`,
@@ -384,12 +363,14 @@ const Gallery = () => {
                 }}
                 animate={{ 
                   y: [`${Math.random() * 100}%`, `${Math.random() * 100}%`],
-                  opacity: [0, 0.8, 0]
+                  opacity: [0, 1, 0],
+                  scale: [0.5, 1, 0.5]
                 }}
                 transition={{ 
-                  duration: Math.random() * 10 + 10,
+                  duration: Math.random() * 8 + 6,
                   repeat: Infinity,
-                  ease: "easeInOut"
+                  ease: "easeInOut",
+                  delay: Math.random() * 5
                 }}
               />
             ))}
@@ -400,20 +381,20 @@ const Gallery = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 1.2 }}
-            className="text-center px-6 max-w-4xl relative z-10"
+            transition={{ duration: 1.5 }}
+            className="text-center px-4 sm:px-6 max-w-5xl relative z-10"
           >
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.8 }}
+              transition={{ delay: 0.3, duration: 1, type: "spring" }}
               className="mb-8"
             >
               <motion.h1 
-                className="text-6xl md:text-7xl font-serif font-bold text-amber-400 mb-4"
-                initial={{ y: 30, opacity: 0 }}
+                className="hero-title text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-bold text-amber-400 mb-6"
+                initial={{ y: 40, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.5, duration: 0.8 }}
+                transition={{ delay: 0.5, duration: 1 }}
               >
                 Culinary Gallery
               </motion.h1>
@@ -421,216 +402,395 @@ const Gallery = () => {
               <motion.div 
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
-                transition={{ delay: 0.7, duration: 0.8 }}
-                className="w-48 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent mx-auto mb-6"
+                transition={{ delay: 0.8, duration: 1 }}
+                className="w-32 sm:w-48 lg:w-64 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent mx-auto mb-8"
               ></motion.div>
             </motion.div>
             
             <motion.p 
-              className="text-xl text-cream/90 max-w-3xl mx-auto leading-relaxed backdrop-blur-sm bg-black/10 p-4 rounded-lg"
-              initial={{ y: 20, opacity: 0 }}
+              className="hero-subtitle text-lg sm:text-xl lg:text-2xl text-cream/90 max-w-4xl mx-auto leading-relaxed glass-effect p-4 sm:p-6 rounded-2xl"
+              initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.9, duration: 0.8 }}
+              transition={{ delay: 1, duration: 1 }}
             >
               Step into our world of culinary artistry and elegant ambiance.
               Each image tells a story of passion, precision, and the pursuit of perfection.
             </motion.p>
           </motion.div>
         </div>
-      </div>
-
-      <div className="container mx-auto px-4 sm:px-6 py-12 -mt-10">        {/* Filter Controls */}
-        <div className="bg-black/30 backdrop-blur-sm border border-amber-600/20 rounded-lg p-4 mb-8">
+      </div>      <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-12 -mt-10 max-w-7xl">        
+        {/* Modern Pinterest-Style Filter Bar */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-black/40 backdrop-blur-md border border-amber-600/20 rounded-2xl p-4 sm:p-5 mb-8 shadow-2xl"
+        >
+          {/* Mobile-optimized filter layout */}
           <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400" size={18} />
-              <Input
-                placeholder="Search by tags..."
-                className="pl-10 bg-charcoal border-amber-600/30 text-cream"
-                onChange={(e) => handleSearch(e.target.value)}
-              />
-            </div>
-            
-            {/* Sort Controls */}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={filters.sortBy === 'recent' ? 'default' : 'outline'}
-                size="sm"
-                className={filters.sortBy === 'recent' ? 'bg-amber-600 text-black' : 'border-amber-600/30 text-amber-400'}
-                onClick={() => changeSortMethod('recent')}
-              >
-                <Calendar size={16} className="mr-2" />
-                {filters.sortBy === 'recent' && (
-                  filters.sortDirection === 'desc' ? 'Newest' : 'Oldest'
-                )}
-                {filters.sortBy !== 'recent' && 'Date'}
-              </Button>
-              
-              <Button
-                variant={filters.sortBy === 'views' ? 'default' : 'outline'}
-                size="sm"
-                className={filters.sortBy === 'views' ? 'bg-amber-600 text-black' : 'border-amber-600/30 text-amber-400'}
-                onClick={() => changeSortMethod('views')}
-              >
-                <Eye size={16} className="mr-2" />
-                {filters.sortBy === 'views' && (
-                  filters.sortDirection === 'desc' ? 'Most Viewed' : 'Least Viewed'
-                )}
-                {filters.sortBy !== 'views' && 'Views'}
-              </Button>
-              
-              <Button
-                variant={filters.sortBy === 'type' ? 'default' : 'outline'}
-                size="sm"
-                className={filters.sortBy === 'type' ? 'bg-amber-600 text-black' : 'border-amber-600/30 text-amber-400'}
-                onClick={() => changeSortMethod('type')}
-              >
-                {filters.sortBy === 'type' && filters.sortDirection === 'desc' ? (
-                  <Film size={16} className="mr-2" />
-                ) : (
-                  <Image size={16} className="mr-2" />
-                )}
-                Type
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-amber-600/30 text-amber-400"
-                onClick={() => setFilters({
-                  category: 'all',
-                  searchQuery: '',
-                  sortBy: 'recent',
-                  sortDirection: 'desc'
-                })}
-              >
-                Reset
-              </Button>
-            </div>
-          </div>          
-          {/* Category Filters */}
-          <div className="flex flex-wrap gap-2 mt-4 overflow-x-auto pb-1">
-            {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
-              <Badge
-                key={key}
-                variant={filters.category === key ? 'default' : 'outline'}
-                className={`cursor-pointer text-sm py-1.5 px-3 ${
-                  filters.category === key 
-                    ? 'bg-amber-600 text-black hover:bg-amber-700' 
-                    : 'border-amber-600/30 text-amber-400 hover:border-amber-400'
-                }`}
-                onClick={() => changeCategory(key as MediaCategory)}
-              >
-                {label}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        {/* Gallery Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-          {isLoading && skeletonItems.map((_, index) => (
-            <div key={`skeleton-${index}`} className="relative aspect-[4/3] group">
-              <Skeleton className="w-full h-full rounded-lg bg-charcoal/70" />
-            </div>
-          ))}
-          
-          <AnimatePresence mode="popLayout">
-            {!isLoading && displayItems.map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.3, delay: index * 0.05 % 0.5 }}
-                layout
-                className="relative aspect-[4/3] group"
-                whileHover={{ y: -5, transition: { duration: 0.2 } }}
-              >
-                <div 
-                  className="w-full h-full overflow-hidden rounded-lg border border-amber-600/20 group-hover:border-amber-400/40 transition-all duration-300 cursor-pointer bg-black/30 backdrop-blur-sm"
-                  onClick={() => openLightbox(item, index)}
-                >
-                  {item.type === 'video' ? (
-                    <div className="relative w-full h-full">
-                      <video 
-                        src={item.url} 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        muted
-                        loop
-                        playsInline
-                        onMouseOver={(e) => e.currentTarget.play()}
-                        onMouseOut={(e) => e.currentTarget.pause()}
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-16 h-16 rounded-full bg-amber-600/80 flex items-center justify-center text-black">
-                          <Play size={32} />
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <img 
-                      src={item.url} 
-                      alt={item.title || 'Gallery image'} 
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  )}
+            {/* Category Pills - Horizontal Instagram-Style Scroll */}
+            <div className="order-2 sm:order-1 sm:flex-1">
+              <div className="relative">
+                <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-2 pt-1">
+                  {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                    <motion.button
+                      key={key}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className={`
+                        filter-button flex-shrink-0 min-w-[66px] px-3 py-2 rounded-full text-xs font-medium transition-all duration-300 whitespace-nowrap
+                        ${filters.category === key 
+                          ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 border border-amber-400' 
+                          : 'bg-charcoal/50 text-amber-400 border border-amber-600/30 hover:border-amber-400/50'
+                        }
+                      `}
+                      onClick={() => changeCategory(key as MediaCategory)}
+                    >
+                      {label}
+                    </motion.button>
+                  ))}
                 </div>
                 
-                {/* Overlay with Info */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                {/* Gradient fade indicators for scrolling */}
+                <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-black/40 to-transparent pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-black/40 to-transparent pointer-events-none" />
+              </div>
+            </div>
+            
+            {/* Advanced Filters + Search - Compact Layout */}
+            <div className="order-1 sm:order-2 flex items-center gap-2 self-end">
+              {/* Compact Search Button - Expands on click */}
+              <motion.div 
+                className="relative"
+                animate={{ width: showSearch ? 220 : 44 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              >
+                {showSearch ? (
+                  <div className="relative w-full flex items-center">
+                    <Input
+                      placeholder="Search gallery..."
+                      className="pl-10 pr-8 py-2 bg-charcoal/80 border-amber-600/30 text-cream rounded-full h-11 w-full focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
+                      onChange={(e) => handleSearch(e.target.value)}
+                      autoFocus
+                    />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400/70 pointer-events-none" size={16} />
+                    <button 
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-cream/70 hover:text-amber-400"
+                      onClick={() => {
+                        setShowSearch(false);
+                        if (filters.searchQuery) {
+                          handleSearch('');
+                        }
+                      }}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full h-11 w-11 border-amber-600/30 bg-charcoal/60 hover:bg-amber-600/20 text-amber-400"
+                    onClick={() => setShowSearch(true)}
+                  >
+                    <Search size={18} />
+                  </Button>
+                )}
+              </motion.div>
+              
+              {/* Filter + Sort Dropdown Button */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline" 
+                    size="icon"
+                    className={`
+                      rounded-full h-11 w-11 transition-all duration-300 flex items-center justify-center
+                      ${hasActiveFilters 
+                        ? 'bg-amber-600 text-black border-amber-400 shadow-lg shadow-amber-500/25' 
+                        : 'bg-charcoal/60 text-amber-400 border-amber-600/30 hover:bg-amber-600/20'
+                      }
+                    `}
+                  >
+                    <SlidersHorizontal size={18} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent 
+                  className="w-60 bg-charcoal/95 backdrop-blur-xl border-amber-600/30 text-cream p-2 rounded-xl"
+                  align="end"
+                >
+                  <div className="px-2 pb-2 text-sm font-medium text-amber-400">Sort Gallery By</div>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-lg justify-start ${filters.sortBy === 'recent' ? 'bg-amber-600/20 text-amber-400' : 'text-cream/80'}`}
+                      onClick={() => changeSortMethod('recent')}
+                    >
+                      <Calendar size={15} className="mr-2" /> Recent
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-lg justify-start ${filters.sortBy === 'views' ? 'bg-amber-600/20 text-amber-400' : 'text-cream/80'}`}
+                      onClick={() => changeSortMethod('views')}
+                    >
+                      <Eye size={15} className="mr-2" /> Popular
+                    </Button>
+                  </div>
+                  
+                  {hasActiveFilters && (
+                    <>
+                      <div className="border-t border-amber-600/20 my-2"></div>
+                      <div className="px-2 py-1 text-xs text-amber-400/80 font-medium">ACTIVE FILTERS</div>
+                      <div className="flex flex-wrap gap-2 px-2 mb-3">
+                        {filters.category !== 'all' && (
+                          <Badge 
+                            variant="outline" 
+                            className="bg-amber-600/20 text-amber-400 border-amber-400/50 text-xs cursor-pointer hover:bg-amber-600/30"
+                            onClick={() => changeCategory('all')}
+                          >
+                            {CATEGORY_LABELS[filters.category]} <X size={12} className="ml-1" />
+                          </Badge>
+                        )}
+                        
+                        {filters.searchQuery && (
+                          <Badge 
+                            variant="outline" 
+                            className="bg-amber-600/20 text-amber-400 border-amber-400/50 text-xs cursor-pointer hover:bg-amber-600/30"
+                            onClick={() => handleSearch('')}
+                          >
+                            "{filters.searchQuery}" <X size={12} className="ml-1" />
+                          </Badge>
+                        )}
+                        
+                        {filters.sortBy !== 'recent' && (
+                          <Badge 
+                            variant="outline" 
+                            className="bg-amber-600/20 text-amber-400 border-amber-400/50 text-xs cursor-pointer hover:bg-amber-600/30"
+                            onClick={() => changeSortMethod('recent')}
+                          >
+                            {filters.sortBy === 'views' ? 'Popular' : 'Type'} <X size={12} className="ml-1" />
+                          </Badge>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-center text-amber-400 hover:bg-amber-600/10 hover:text-amber-300"
+                        onClick={() => {
+                          setFilters({
+                            category: 'all',
+                            searchQuery: '',
+                            sortBy: 'recent',
+                            sortDirection: 'desc'
+                          });
+                          resetGallery();
+                          setShowSearch(false);
+                        }}
+                      >
+                        <X size={14} className="mr-2" /> Reset All Filters
+                      </Button>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </motion.div>{/* Enhanced Gallery Grid */}
+        <motion.div 
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6 lg:gap-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          {isLoading && skeletonItems.map((_, index) => (
+            <motion.div 
+              key={`skeleton-${index}`} 
+              className="relative aspect-[4/3] group"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Skeleton className="w-full h-full rounded-2xl bg-charcoal/50 border border-amber-600/10" />
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-600/5 to-transparent rounded-2xl" />
+            </motion.div>
+          ))}
+          
+          {!isLoading && displayItems.length === 0 && <EmptyGalleryState />}
+          
+          <AnimatePresence mode="popLayout">            {!isLoading && displayItems.map((item, index) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: -20 }}
+                transition={{ 
+                  duration: 0.5, 
+                  delay: index * 0.05,
+                  type: "spring",
+                  stiffness: 100,
+                  damping: 15
+                }}
+                layout
+                className="relative aspect-[4/3] group cursor-pointer"                whileHover={{ y: -8, transition: { duration: 0.3 } }}
+              >                <div 
+                  className="
+                    w-full h-full overflow-hidden rounded-2xl border border-amber-600/20 
+                    group-hover:border-amber-400/50 group-hover:shadow-2xl group-hover:shadow-amber-600/25
+                    transition-all duration-500 bg-black/20 backdrop-blur-sm
+                    relative
+                  "
+                  onClick={() => openLightbox(item, index)}
+                >
+                  {/* Favorite Button */}
+                  <FavoriteButton 
+                    itemId={item.id}
+                    itemType="gallery"
+                    itemData={{
+                      name: item.title || 'Gallery image',
+                      description: item.description,
+                      imageUrl: item.url
+                    }}
+                  />
+                  {/* Image/Video Container */}
+                  <div className="relative w-full h-full overflow-hidden">
+                    {item.type === 'video' ? (
+                      <>
+                        <video 
+                          src={item.url} 
+                          className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
+                          muted
+                          loop
+                          playsInline
+                          onMouseOver={(e) => e.currentTarget.play()}
+                          onMouseOut={(e) => e.currentTarget.pause()}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
+                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-black shadow-lg">
+                            <PlayCircle size={32} />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <img 
+                        src={item.url} 
+                        alt={item.title || 'Gallery image'} 
+                        className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
+                        loading="lazy"
+                      />
+                    )}
+                    
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300" />
+                  </div>
+                </div>
+                
+                {/* Enhanced Overlay with Info */}
+                <motion.div 
+                  className="
+                    absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent 
+                    opacity-0 group-hover:opacity-100 transition-all duration-300 
+                    flex flex-col justify-end p-4 sm:p-6 rounded-2xl
+                  "
+                  initial={false}
+                >
                   {item.title && (
-                    <h3 className="text-lg font-semibold text-amber-400 mb-1">
+                    <motion.h3 
+                      className="text-lg sm:text-xl font-semibold text-amber-400 mb-2 truncate"
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.1 }}
+                    >
                       {item.title}
-                    </h3>
+                    </motion.h3>
                   )}
                   
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    <Badge variant="outline" className="bg-black/40 text-amber-400 border-amber-400/30">
+                  <motion.div 
+                    className="flex flex-wrap gap-2 mb-3"
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <Badge 
+                      variant="outline" 
+                      className="bg-black/60 text-amber-400 border-amber-400/50 text-xs backdrop-blur-sm"
+                    >
                       {CATEGORY_LABELS[item.category as MediaCategory]}
                     </Badge>
                     
                     {item.type === 'video' && (
-                      <Badge variant="outline" className="bg-black/40 text-blue-400 border-blue-400/30">
+                      <Badge variant="outline" className="bg-black/60 text-blue-400 border-blue-400/50 text-xs backdrop-blur-sm">
+                        <Film size={12} className="mr-1" />
                         Video
                       </Badge>
                     )}
                     
                     {item.featured && (
-                      <Badge variant="outline" className="bg-black/40 text-purple-400 border-purple-400/30">
-                        Featured
+                      <Badge variant="outline" className="bg-black/60 text-purple-400 border-purple-400/50 text-xs backdrop-blur-sm">
+                        ⭐ Featured
                       </Badge>
                     )}
-                  </div>
+                  </motion.div>
                   
-                  {item.tags && item.tags.length > 0 && (
-                    <div className="flex items-center gap-1 text-cream/70 text-xs">
-                      <Tag size={12} className="text-cream/50" />
-                      {item.tags.slice(0, 3).join(', ')}
-                      {item.tags.length > 3 && ' ...'}
-                    </div>
-                  )}
-                </div>
+                  {/* Tags and Views */}
+                  <motion.div 
+                    className="flex items-center justify-between text-xs"
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    {item.tags && item.tags.length > 0 && (
+                      <div className="flex items-center gap-1 text-cream/70 truncate flex-1">
+                        <Tag size={12} className="text-cream/50 flex-shrink-0" />
+                        <span className="truncate">
+                          {item.tags.slice(0, 2).join(', ')}
+                          {item.tags.length > 2 && '...'}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-1 text-cream/60 ml-2">
+                      <Eye size={12} />
+                      <span>{item.views || 0}</span>
+                    </div>                  </motion.div>
+                </motion.div>
               </motion.div>
             ))}
           </AnimatePresence>
-        </div>
-        
-        {/* Load More */}
-        <div ref={setRefs} className="flex justify-center mt-12">
+        </motion.div>
+          {/* Enhanced Load More Section */}        <motion.div 
+          ref={setRefs} 
+          className="flex justify-center mt-16"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+        >
           {isLoadingMore && (
-            <div className="flex items-center gap-2 text-amber-400">
+            <motion.div 
+              className="flex items-center gap-3 text-amber-400 bg-black/30 backdrop-blur-sm rounded-full px-6 py-3 border border-amber-600/20"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+            >
               <div className="w-5 h-5 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin"></div>
-              Loading more...
-            </div>
+              <span className="font-medium">Loading more amazing content...</span>
+            </motion.div>
           )}
           
           {!isLoading && !isLoadingMore && !hasMore && galleryItems.length > 0 && (
-            <p className="text-cream/70">You've reached the end of the gallery</p>
+            <motion.div 
+              className="text-center py-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="w-16 h-16 rounded-full bg-amber-600/10 flex items-center justify-center mx-auto mb-4">
+                <Image size={24} className="text-amber-400/50" />
+              </div>
+              <p className="text-cream/70 font-medium">You've reached the end of our gallery</p>
+              <p className="text-cream/50 text-sm mt-1">Check back later for new content!</p>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
 
         {/* Lightbox Modal */}
         <AnimatePresence>

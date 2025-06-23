@@ -1,7 +1,6 @@
+import { useUserAuth } from '../contexts/UserAuthContext';
 import { useEffect, useState } from 'react';
-import { useAuthState } from 'react-firebase-hooks/auth';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../lib/firebase';
 
 interface AuthGuardOptions {
   redirectTo?: string;
@@ -9,7 +8,7 @@ interface AuthGuardOptions {
 }
 
 export const useAuthGuard = (options: AuthGuardOptions = {}) => {
-  const [user, loading] = useAuthState(auth);
+  const { user, loading } = useUserAuth();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const navigate = useNavigate();
   

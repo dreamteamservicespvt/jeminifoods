@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { db, auth } from '../../lib/firebase';
+import { db } from '../../lib/firebase';
 import { uploadToCloudinary } from '../../lib/cloudinary';
 import { useForm } from 'react-hook-form';
 import { 
@@ -10,7 +11,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
-import { useAuthState } from 'react-firebase-hooks/auth';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -54,7 +54,7 @@ const MenuManager = () => {
   const [showForm, setShowForm] = useState(false);
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<MenuFormData>();
   const { toast } = useToast();
-  const [user, loading] = useAuthState(auth);
+  const { adminUser: user, loading } = useAdminAuth();
   
   // New state variables
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);

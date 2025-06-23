@@ -1,7 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from './lib/firebase';
+import { useUserAuthOnly } from './contexts/MultiAuthContext';
 
 // Import all pages
 import Home from "./pages/Home";
@@ -13,38 +12,51 @@ import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import UserDashboard from "./pages/UserDashboard";
+import MyOrders from "./pages/MyOrders";
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import ChefLogin from './pages/chef/ChefLogin';
+import ChefDashboard from './pages/chef/ChefDashboard';
 import NotFound from "./pages/NotFound";
 import PreOrders from "./pages/PreOrders";
+import MultiSessionDemo from "./pages/MultiSessionDemo";
 
 // Import components
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
+import AdminProtectedRoute from './components/admin/AdminProtectedRoute';
 
 const AppRoutes = () => {
-  const [user, loading] = useAuthState(auth);
+  const { user, loading } = useUserAuthOnly();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-charcoal flex items-center justify-center">
-        <div className="text-amber-400 text-2xl font-serif">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <Routes>
-      {/* Admin routes without TitleBar */}
+      {/* Admin routes - PROTECTED with proper authentication */}
+      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin/dashboard" element={
+        <AdminProtectedRoute>
+          <AdminDashboard />
+        </AdminProtectedRoute>
+      } />
       <Route path="/admin" element={
-        user ? <AdminDashboard /> : <AdminLogin />
+        <AdminProtectedRoute>
+          <AdminDashboard />
+        </AdminProtectedRoute>
+      } />
+      
+      {/* Chef routes without TitleBar */}
+      <Route path="/chef/login" element={<ChefLogin />} />
+      <Route path="/chef/dashboard" element={<ChefDashboard />} />
+      <Route path="/chef" element={
+        user ? <ChefDashboard /> : <ChefLogin />
       } />
       
       {/* Authentication routes without TitleBar and Navigation */}
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/user-dashboard" element={<UserDashboard />} />
-        {/* Public routes with Navigation only */}
+      
+      {/* Public routes with Navigation only */}
       <Route path="/*" element={
         <>
           <Navigation />
@@ -55,8 +67,10 @@ const AppRoutes = () => {
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/reservations" element={<Reservations />} />
               <Route path="/preorders" element={<PreOrders />} />
-              <Route path="/about" element={<About />} />
+              <Route path="/my-orders" element={<MyOrders />} />              <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/dashboard" element={<UserDashboard />} />
+              <Route path="/multi-session-demo" element={<MultiSessionDemo />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>

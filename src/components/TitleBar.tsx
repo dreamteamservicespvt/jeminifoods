@@ -1,9 +1,7 @@
+import { useUserAuth } from "../contexts/UserAuthContext";
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, User, LogOut, Sparkles } from "lucide-react";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "../lib/firebase";
-import { signOut } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
@@ -11,7 +9,7 @@ const TitleBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
-  const [user] = useAuthState(auth);
+  const { user, logout } = useUserAuth();
 
   // Navigation links
   const navLinks = [
@@ -33,11 +31,10 @@ const TitleBar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
   // Handle user logout
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await logout();
     } catch (error) {
       console.error("Error signing out:", error);
     }

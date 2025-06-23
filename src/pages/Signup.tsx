@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { useUserAuthOnly } from '../contexts/MultiAuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -45,6 +43,7 @@ const Signup = () => {
   const navigate = useNavigate();
   const password = watch('password');
   const confirmPassword = watch('confirmPassword');
+  const { signUp, signInWithGoogle } = useUserAuthOnly();
 
   // Password strength calculation
   useEffect(() => {
@@ -87,7 +86,6 @@ const Signup = () => {
       audioRef.current.play().catch(() => {});
     }
   };
-
   // Handle Google signup
   const handleGoogleSignup = async () => {
     setIsLoading(true);
@@ -95,31 +93,14 @@ const Signup = () => {
     playSound('click');
     
     try {
-      const provider = new GoogleAuthProvider();
-      const userCredential = await signInWithPopup(auth, provider);
-      const userEmail = userCredential.user.email || '';
-      
-      // Check if the email is admin
-      const isAdmin = userEmail === 'admin@jeminifoods.com';
-      
-      // Create user profile in Firestore with appropriate role
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        fullName: userCredential.user.displayName || '',
-        email: userEmail,
-        phone: '',
-        profileImage: userCredential.user.photoURL || null,
-        createdAt: serverTimestamp(),
-        provider: 'google',
-        role: isAdmin ? 'admin' : 'user'
-      });
+      await signInWithGoogle();
       
       setSuccess(true);
       triggerConfetti();
       playSound('success');
       
       setTimeout(() => {
-        // Redirect admin users to admin dashboard, regular users to user dashboard
-        navigate(isAdmin ? '/admin/dashboard' : '/user-dashboard');
+        navigate('/user-dashboard');
       }, 2000);
       
     } catch (error: any) {
@@ -130,7 +111,6 @@ const Signup = () => {
       setIsLoading(false);
     }
   };
-
   // Handle form submission
   const onSubmit = async (data: SignupFormData) => {
     if (data.password !== data.confirmPassword) {
@@ -144,19 +124,8 @@ const Signup = () => {
     playSound('click');
     
     try {
-      // Create Firebase user
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-        // Create user profile in Firestore with appropriate role
-      const isAdmin = data.email === 'admin@jeminifoods.com';
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        fullName: data.fullName,
-        email: data.email,
-        phone: data.phone,
-        profileImage: null,
-        createdAt: serverTimestamp(),
-        provider: 'email',
-        role: isAdmin ? 'admin' : 'user'
-      });
+      // Create Firebase user using auth context
+      await signUp(data.email, data.password, data.fullName, data.phone);
       
       setSuccess(true);
       triggerConfetti();

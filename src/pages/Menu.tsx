@@ -12,6 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useInView } from 'react-intersection-observer';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { cn } from '@/lib/utils';
+import { useFavorites } from '../hooks/useFavorites';
+import FavoriteButton from '../components/favorites/FavoriteButton';
 
 interface MenuItem {
   id: string;
@@ -32,6 +34,50 @@ interface MenuItem {
   }[];
   visibility?: boolean;
   videoUrl?: string;
+}
+
+// Function to toggle favorite status
+const MenuItemFavoriteToggle = ({ item }: { item: MenuItem }) => {
+  const { isFavorite, addFavorite, removeFavorite, getFavoriteId } = useFavorites();
+  
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    const isCurrentlyFavorite = isFavorite(item.id, 'menuItem');
+    
+    if (isCurrentlyFavorite) {
+      const favoriteId = getFavoriteId(item.id, 'menuItem');
+      if (favoriteId) {
+        await removeFavorite(favoriteId);
+      }
+    } else {
+      await addFavorite({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        imageUrl: item.image,
+        type: 'menuItem'
+      });
+    }
+  };
+  
+  const isFav = isFavorite(item.id, 'menuItem');
+  
+  return (
+    <motion.button
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9 }}
+      onClick={handleToggleFavorite}
+      className={`absolute top-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center ${
+        isFav 
+          ? 'bg-red-500 text-white' 
+          : 'bg-black/50 backdrop-blur-sm text-white hover:bg-black/70'
+      }`}
+    >
+      <Heart className={`w-5 h-5 ${isFav ? 'fill-white' : ''}`} />
+    </motion.button>
+  );
 }
 
 // Enhanced category config with beautiful descriptions and gradients
@@ -931,8 +977,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
           </div>
         </motion.div>
       )}
-      
-      {/* Special Offer Badge */}
+        {/* Special Offer Badge */}
       {item.specialOffer && (
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -946,6 +991,18 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
           </div>
         </motion.div>
       )}
+      
+      {/* Favorite Button */}
+      <FavoriteButton 
+        itemId={item.id}
+        itemType="menuItem"
+        itemData={{
+          name: item.name,
+          description: item.description,
+          imageUrl: item.image
+        }}
+        className={item.featured || item.specialOffer ? "top-14 right-3" : ""}
+      />
         {/* Image Section */}
       <div className={cn(
         "relative overflow-hidden",

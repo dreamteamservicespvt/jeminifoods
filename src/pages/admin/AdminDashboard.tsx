@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { signOut } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { useAdminAuthOnly } from '../../contexts/MultiAuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import MenuManager from './MenuManager';
 import GalleryManager from './GalleryManager';
@@ -12,15 +11,15 @@ import { useScrollTop } from '@/hooks/use-scroll-top';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { 
   Menu as MenuIcon, X, LogOut, Utensils, Image, CalendarCheck,
-  ShoppingCart, BookOpen, Mail, ChevronRight
+  ShoppingCart, BookOpen, Mail, ChevronRight, AlertTriangle
 } from 'lucide-react';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('menu');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
-  
-  // Apply scroll to top effect when changing tabs
+  const { logoutAdmin } = useAdminAuthOnly();
+    // Apply scroll to top effect when changing tabs
   useScrollTop();
 
   // Close sidebar when switching tabs on mobile
@@ -41,15 +40,13 @@ const AdminDashboard = () => {
       document.body.style.overflow = '';
     };
   }, [isSidebarOpen, isMobile]);
-
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
+      await logoutAdmin();
     } catch (error) {
       console.error('Sign out error:', error);
     }
   };
-
   const tabs = [
     { id: 'menu', label: 'Menu Management', icon: <Utensils size={20} /> },
     { id: 'gallery', label: 'Gallery', icon: <Image size={20} /> },
@@ -58,7 +55,7 @@ const AdminDashboard = () => {
     { id: 'about', label: 'About Page', icon: <BookOpen size={20} /> },
     { id: 'contacts', label: 'Contacts', icon: <Mail size={20} /> },
   ];
-
+  // No need for loading check since AdminProtectedRoute handles it
   return (
     <div className="min-h-screen bg-charcoal">
       {/* Header */}

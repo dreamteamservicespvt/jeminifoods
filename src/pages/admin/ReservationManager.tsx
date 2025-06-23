@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Calendar, Clock, Users, Phone, Mail, User, Check, X, Eye } from 'lucide-react';
+import { useAdminNotifications } from '../../hooks/useNotificationActions';
+import { useToast } from '../../components/ui/use-toast';
 
 interface Reservation {
   id: string;
@@ -14,12 +16,17 @@ interface Reservation {
   specialRequests?: string;
   status: 'pending' | 'confirmed' | 'cancelled';
   createdAt: any;
+  userId?: string;
+  tableId?: string;
 }
 
 const ReservationManager = () => {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled'>('all');
+  
+  const { sendReservationConfirmed, sendReservationCancelled } = useAdminNotifications();
+  const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'reservations'), (snapshot) => {
@@ -35,12 +42,43 @@ const ReservationManager = () => {
 
     return unsubscribe;
   }, []);
-
   const updateReservationStatus = async (id: string, status: 'confirmed' | 'cancelled') => {
-    await updateDoc(doc(db, 'reservations', id), { status });
-    if (status === 'confirmed') {
+    try {
+      await updateDoc(doc(db, 'reservations', id), { status });
+      
       const reservation = reservations.find(r => r.id === id);
-      if (reservation) {
+      if (!reservation) return;
+
+      if (status === 'confirmed') {
+        // Send confirmation notifications
+        const success = await sendReservationConfirmed(
+          reservation.userId || 'guest',
+          {
+            id: reservation.id,
+            userName: reservation.name,
+            userEmail: reservation.email,
+            userPhone: reservation.phone,
+            date: reservation.date,
+            time: reservation.time,
+            guests: reservation.guests,
+            tableNumber: reservation.tableId || 'TBD'
+          }
+        );
+
+        if (success) {
+          toast({
+            title: "Reservation Confirmed",
+            description: `${reservation.name}'s reservation confirmed and notifications sent.`,
+          });
+        } else {
+          toast({
+            title: "Reservation Confirmed",
+            description: "Reservation confirmed but some notifications failed to send.",
+            variant: "destructive"
+          });
+        }
+
+        // Legacy email fallback
         try {
           await fetch("/api/sendEmail", {
             method: "POST",
@@ -52,10 +90,41 @@ const ReservationManager = () => {
             })
           });
         } catch (e) {
-          // Optionally handle error
           console.error("Failed to send confirmation email:", e);
         }
+      } else if (status === 'cancelled') {
+        // Send cancellation notifications
+        const success = await sendReservationCancelled(
+          reservation.userId || 'guest',
+          {
+            id: reservation.id,
+            userName: reservation.name,
+            userPhone: reservation.phone,
+            date: reservation.date,
+            time: reservation.time
+          }
+        );
+
+        if (success) {
+          toast({
+            title: "Reservation Cancelled",
+            description: `${reservation.name}'s reservation cancelled and notifications sent.`,
+          });
+        } else {
+          toast({
+            title: "Reservation Cancelled", 
+            description: "Reservation cancelled but some notifications failed to send.",
+            variant: "destructive"
+          });
+        }
       }
+    } catch (error) {
+      console.error("Error updating reservation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update reservation status.",
+        variant: "destructive"
+      });
     }
   };
 

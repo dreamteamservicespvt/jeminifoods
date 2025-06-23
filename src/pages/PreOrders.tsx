@@ -2,8 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { collection, addDoc, onSnapshot, query, orderBy, where, Timestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useToast } from "@/components/ui/use-toast";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "../lib/firebase";
+import { useUserAuth } from "../contexts/UserAuthContext";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -14,11 +13,12 @@ import {
   Phone, Search, ShoppingCart, Filter, X, Plus, Minus, 
   Calendar as CalendarIcon, Clock as ClockIcon, ChevronRight, 
   AlertCircle, ChevronsRight, RefreshCw, Trash2, Upload,
-  Copy, Check, CreditCard, QrCode
+  Copy, Check, CreditCard, QrCode, Package, ArrowRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { uploadToCloudinary } from "../lib/cloudinary";
+import { Link } from "react-router-dom";
 
 // Enhanced MenuItem type with dietary information
 interface MenuItem {
@@ -59,12 +59,12 @@ interface PreOrder {
 
 const PreOrders = () => {
   // UPI Payment details
-  const upiId = "9885321957@ybl"; // UPI ID
+  const upiId = "9392521026@axl"; // UPI ID
   const upiName = "Jemini Foods";
   const upiCurrency = "INR";
-
-  const [user] = useAuthState(auth);
+  const { user } = useUserAuth();
   const { toast } = useToast();
+  
   const [preOrders, setPreOrders] = useState<PreOrder[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -407,11 +407,19 @@ const PreOrders = () => {
         paymentConfirmed: true,
         imageProvider: "cloudinary" // Add this to track where images are stored
       };
-      
-      console.log("Submitting order data to Firebase:", orderData);
-      
-      // Submit to Firebase
+        console.log("Submitting order data to Firebase:", orderData);
+        // Submit to Firebase
       await addDoc(collection(db, "preOrders"), orderData);
+
+      // Send customer notification (temporarily disabled)
+      // if (user) {
+      //   await sendOrderConfirmation(user.uid, {
+      //     orderId,
+      //     total: orderTotal,
+      //     items: cleanedItems.length,
+      //     pickupTime: checkoutForm.time
+      //   });
+      // }
       
       // Show success state
       setNewOrderId(orderId);
@@ -608,9 +616,27 @@ const PreOrders = () => {
           </motion.div>
         </div>
       </div>
-      
-      {/* Main Content */}
+        {/* Main Content */}
       <div className="max-w-7xl mx-auto">
+        {/* Navigation Header for Authenticated Users */}
+        {user && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mb-6 flex justify-center"
+          >
+            <Link 
+              to="/my-orders"
+              className="group flex items-center gap-3 bg-amber-600 hover:bg-amber-700 text-black px-6 py-3 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              <Package className="w-5 h-5" />
+              <span>View My Orders</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+            </Link>
+          </motion.div>
+        )}
+        
         {/* Search and Filters */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}

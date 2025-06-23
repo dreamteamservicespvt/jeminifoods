@@ -45,7 +45,17 @@ interface PreOrder {
   paymentStatus?: 'pending' | 'completed';
   paymentScreenshotUrl?: string;
   paymentMethod?: 'upi' | 'qr';
+  assignedChef?: string; // New field for chef assignment
+  userId?: string; // Add userId for better tracking
 }
+
+// Mock chef data - in a real app, this would come from a chefs collection
+const availableChefs = [
+  { id: 'chef1', name: 'Chef Marco Rodriguez', email: 'marco@jemini.com', specialty: 'Italian Cuisine' },
+  { id: 'chef2', name: 'Chef Sarah Kim', email: 'sarah@jemini.com', specialty: 'Asian Fusion' },
+  { id: 'chef3', name: 'Chef David Thompson', email: 'david@jemini.com', specialty: 'French Cuisine' },
+  { id: 'chef4', name: 'Chef Maria Santos', email: 'maria@jemini.com', specialty: 'Mediterranean' },
+];
 
 const statusOptions = [
   { value: "pending", label: "Pending" },
@@ -174,6 +184,35 @@ const AdminPreOrders = () => {
       }
     } catch (error) {
       console.error("Error updating order status:", error);
+    }
+    setActionLoading(null);
+  };
+
+  // Assign chef to order
+  const assignChefToOrder = async (orderId: string, chefEmail: string) => {
+    setActionLoading(orderId + '-assign');
+    try {
+      await updateDoc(doc(db, "preOrders", orderId), { 
+        assignedChef: chefEmail,
+        status: 'taken' // Automatically set status to taken when chef is assigned
+      });
+      
+      // Send notification to chef
+      try {
+        await fetch("/api/sendEmail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: chefEmail,
+            subject: "New Order Assigned",
+            text: `You have been assigned a new order #${orderId.slice(-4)}. Please check your chef dashboard for details.`
+          })
+        });
+      } catch (e) {
+        console.error("Failed to send chef notification:", e);
+      }
+    } catch (error) {
+      console.error("Error assigning chef:", error);
     }
     setActionLoading(null);
   };

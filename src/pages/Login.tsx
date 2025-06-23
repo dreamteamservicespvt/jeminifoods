@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import { useUserAuthOnly } from '../contexts/MultiAuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -43,6 +44,7 @@ const Login = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
   
   const navigate = useNavigate();
+  const { signIn, signInWithGoogle } = useUserAuthOnly();
 
   // Play interaction sounds
   const playSound = (type: 'success' | 'error' | 'click' = 'click') => {
@@ -52,7 +54,6 @@ const Login = () => {
       audioRef.current.play().catch(() => {});
     }
   };
-
   // Handle Google login
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -60,8 +61,7 @@ const Login = () => {
     playSound('click');
     
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      await signInWithGoogle();
       
       setSuccessMessage('Welcome back! Redirecting to home...');
       playSound('success');
@@ -78,7 +78,6 @@ const Login = () => {
       setIsLoading(false);
     }
   };
-
   // Handle email/password login
   const onLoginSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -86,7 +85,7 @@ const Login = () => {
     playSound('click');
     
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
+      await signIn(data.email, data.password);
       
       setSuccessMessage('Welcome back! Redirecting to home...');
       playSound('success');

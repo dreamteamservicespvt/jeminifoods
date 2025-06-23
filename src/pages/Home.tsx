@@ -90,33 +90,7 @@ const Home = () => {
     }
   ];
 
-  // Page loading animation
-  if (!isLoaded) {
-    return (
-      <div className="fixed inset-0 bg-charcoal flex items-center justify-center z-50">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center"
-        >
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="text-6xl font-serif font-bold text-amber-400 mb-4"
-          >
-            Jemini Foods
-          </motion.div>
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: 180 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="h-0.5 bg-amber-400 mx-auto"
-          />
-        </motion.div>
-      </div>
-    );
-  }
+  
 
   return (
     <>      {/* Enhanced Hero Section with image slideshow */}

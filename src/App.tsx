@@ -1,10 +1,14 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import AppRoutes from './routes';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { MultiAuthProvider } from './contexts/MultiAuthContext';
+import LoadingScreen from './components/LoadingScreen';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const queryClient = new QueryClient();
 
@@ -20,15 +24,24 @@ const ScrollToTop = () => {
 };
 
 const App = () => {
+  const [loadingComplete, setLoadingComplete] = useState(false);
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <div className="min-h-screen bg-charcoal text-cream">
-          <ScrollToTop />
-          <AppRoutes />
-        </div>
+        <MultiAuthProvider>
+          <NotificationProvider>
+            <div className="relative min-h-screen bg-charcoal text-cream">
+              <ScrollToTop />
+              <Toaster />
+              <Sonner />
+              {loadingComplete ? (
+                <AppRoutes />
+              ) : (
+                <LoadingScreen onComplete={() => setLoadingComplete(true)} />
+              )}
+            </div>
+          </NotificationProvider>
+        </MultiAuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

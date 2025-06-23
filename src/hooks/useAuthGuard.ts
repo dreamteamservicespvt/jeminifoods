@@ -1,7 +1,6 @@
+import { useUserAuth } from '../contexts/UserAuthContext';
 import { useState, useCallback } from 'react';
-import { useAuthState } from 'react-firebase-hooks/auth';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../lib/firebase';
 
 /**
  * A reusable hook for protecting actions that require authentication.
@@ -28,7 +27,7 @@ import { auth } from '../lib/firebase';
  * ```
  */
 export const useAuthGuard = () => {
-  const [user, loading, error] = useAuthState(auth);
+  const { user, loading } = useUserAuth();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const navigate = useNavigate();
 
@@ -68,11 +67,9 @@ export const useAuthGuard = () => {
   const closeAuthDialog = useCallback(() => {
     setShowAuthDialog(false);
   }, []);
-
   return {
     user,
     loading,
-    error,
     isAuthenticated,
     requireAuth,
     showAuthDialog,

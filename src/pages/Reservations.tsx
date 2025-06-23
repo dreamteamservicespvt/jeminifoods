@@ -1,16 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import { addDoc, collection, query, where, getDocs, Timestamp, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
-import { Calendar, Clock, Users, Phone, Mail, User, CheckCircle, MapPin, MoonStar, 
-  ChevronRight, ChevronLeft, Calendar as CalendarIcon, X, Volume, Volume2 } from 'lucide-react';
+import { 
+  Calendar, Clock, Users, Phone, Mail, User, CheckCircle, MapPin, MoonStar, 
+  ChevronRight, ChevronLeft, Calendar as CalendarIcon, X, Volume, Volume2,
+  Info, Table as TableIcon, AlertTriangle, MessageSquare, AlertCircle, 
+  Shield, ShieldCheck, Bookmark, CalendarCheck, CalendarX
+} from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import { cn } from '@/lib/utils';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 import SeatingGallery from '@/components/reservation/SeatingGallery';
+import TableSelectionLayout from '@/components/reservation/TableSelectionLayout';
+import UserReservationStatus from '@/components/reservation/UserReservationStatus';
+import { DiningTable, TableType, TableLocation, TableAvailability } from '@/types/tables';
 
 interface ReservationForm {
   name: string;
@@ -22,10 +32,10 @@ interface ReservationForm {
   specialRequests?: string;
   seatingPreference: string;
   occasion?: string;
+  tableId?: string;
 }
 
-const Reservations = () => {
-  // Form state
+const Reservations = () => {  // Form state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<ReservationForm>();
@@ -36,7 +46,11 @@ const Reservations = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [hoveredTime, setHoveredTime] = useState<string | null>(null);
   const [selectedSeating, setSelectedSeating] = useState<string | null>(null);
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [animateError, setAnimateError] = useState(false);
+  
+  // Authentication
+  const { user, isAuthenticated } = useAuthGuard();
   const [reservationDetails, setReservationDetails] = useState<Partial<ReservationForm> | null>(null);
   const [reservationId, setReservationId] = useState<string>('');
   const [ambientSound, setAmbientSound] = useState(false);
@@ -79,26 +93,20 @@ const Reservations = () => {
     setSelectedSeating(seating);
     setValue('seatingPreference', seating);
   };
-  
-  // Generate available time slots based on selected date
+    // Generate available time slots based on selected date and admin configuration
   const generateTimeSlots = () => {
-    const baseSlots = [
-      '17:00', '17:30', '18:00', '18:30', '19:00', '19:30',
-      '20:00', '20:30', '21:00', '21:30', '22:00'
-    ];
-    
     // If today is selected, filter out past times
     if (selectedDate && isSameDay(selectedDate, new Date())) {
       const currentHour = new Date().getHours();
       const currentMinute = new Date().getMinutes();
       
-      return baseSlots.filter(time => {
+      return adminTimeSlots.filter(time => {
         const [hour, minute] = time.split(':').map(Number);
         return hour > currentHour || (hour === currentHour && minute > currentMinute);
       });
     }
     
-    return baseSlots;
+    return adminTimeSlots;
   };
   
   // Check if two dates are the same day
@@ -157,8 +165,7 @@ const Reservations = () => {
       setCurrentStep(prev => Math.max(prev - 1, 1));
     }, 200);
   };
-  
-  // Generate a calendar grid for the month
+    // Generate a calendar grid for the month
   const generateCalendar = () => {
     const today = new Date();
     const calendarStart = new Date();
@@ -175,6 +182,40 @@ const Reservations = () => {
     
     return dates;
   };
+  
+  // Admin-configured time slots
+  const [adminTimeSlots, setAdminTimeSlots] = useState<string[]>([
+    '17:00', '17:30', '18:00', '18:30', '19:00', '19:30',
+    '20:00', '20:30', '21:00', '21:30', '22:00'
+  ]);
+  const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(false);
+  
+  // Fetch time slots from admin configuration
+  useEffect(() => {
+    const fetchAdminTimeSlots = async () => {
+      setIsLoadingTimeSlots(true);
+      try {
+        // Try to get time slots from admin configuration
+        const adminConfigRef = collection(db, 'admin_config');
+        const timeSlotsQuery = query(adminConfigRef, where('type', '==', 'time_slots'));
+        const snapshot = await getDocs(timeSlotsQuery);
+        
+        if (!snapshot.empty) {
+          // Use admin-configured slots if available
+          const configData = snapshot.docs[0].data();
+          if (configData.slots && configData.slots.length > 0) {
+            setAdminTimeSlots(configData.slots);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching time slots configuration:', error);
+      } finally {
+        setIsLoadingTimeSlots(false);
+      }
+    };
+    
+    fetchAdminTimeSlots();
+  }, []);
   
   // Available dates for booking
   const availableDates = generateCalendar();
@@ -250,8 +291,7 @@ const Reservations = () => {
     try {
       setIsSubmitting(true);
       console.log('Submitting reservation:', data);
-      
-      // Add to Firestore
+        // Add to Firestore
       const docRef = await addDoc(collection(db, 'reservations'), {
         name: data.name.trim(),
         email: data.email.trim(),
@@ -262,8 +302,10 @@ const Reservations = () => {
         specialRequests: data.specialRequests?.trim() || '',
         seatingPreference: data.seatingPreference,
         occasion: data.occasion || 'None',
+        tableId: data.tableId || null, // Include selected tableId
         status: 'pending',
-        createdAt: Timestamp.now()
+        createdAt: Timestamp.now(),
+        userId: user?.uid || null // Track user for future reference
       });
       
       // Store reservation details for confirmation page
@@ -840,13 +882,31 @@ const Reservations = () => {
                         transition={{ duration: 0.3 }}
                         className={cn("space-y-8", animateError && "animate-shake")}
                       >
-                        <div>
-                          <h2 className="text-2xl font-serif font-bold text-amber-400 mb-4 flex items-center gap-2">
+                        <div>                          <h2 className="text-2xl font-serif font-bold text-amber-400 mb-4 flex items-center gap-2">
                             <span className="bg-amber-400 text-black w-8 h-8 rounded-full flex items-center justify-center font-mono">2</span>
                             Choose Your Perfect Setting
                           </h2>
                           
-                          {/* Add the SeatingGallery component */}
+                          {/* Add the TableSelectionLayout component for real-time table availability */}
+                          <div className="mb-8">
+                            <TableSelectionLayout
+                              selectedDate={selectedDate}
+                              selectedTime={watch('time')}
+                              partySize={Number(watch('guests'))}
+                              onTableSelect={(tableId) => {
+                                setSelectedTableId(tableId);
+                                setValue('tableId', tableId);
+                              }}
+                              selectedTableId={selectedTableId}
+                              className="mb-8"
+                            />
+                          </div>
+                          
+                          <h3 className="text-xl font-serif font-medium text-amber-400 mt-12 mb-4">
+                            Or Choose a Seating Preference
+                          </h3>
+                          
+                          {/* Add the SeatingGallery component for visual preference selection */}
                           <SeatingGallery 
                             images={seatingGalleryImages}
                             onSelect={handleSeatingSelect}
@@ -1027,10 +1087,12 @@ const Reservations = () => {
                           )}
                         </div>
                         
-                        <div className="bg-amber-600/10 border border-amber-600/30 p-4 rounded-lg">
-                          <p className="text-cream/80 text-sm">
-                            We'll send a confirmation to your email once your reservation is approved.
-                            You may receive a call to confirm details for special arrangements.
+                        <div className="bg-amber-600/10 border border-amber-600/30 p-4 rounded-lg">                          <p className="text-cream/80 text-sm flex items-start gap-2">
+                            <AlertCircle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                            <span>
+                              We'll send a confirmation to your WhatsApp once your reservation is approved. 
+                              You may receive a call for special arrangements.
+                            </span>
                           </p>
                         </div>
                       </motion.div>

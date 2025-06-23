@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Home, UtensilsCrossed, ImageIcon, Calendar, Info, Phone, ShoppingBag, Sparkles, User, LogIn, UserPlus } from 'lucide-react';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '../lib/firebase';
+import { Menu, X, Home, UtensilsCrossed, ImageIcon, Calendar, Info, Phone, ShoppingBag, Sparkles, User, LogIn, UserPlus, Package } from 'lucide-react';
+import { useUserAuthOnly } from '../contexts/MultiAuthContext';
 import LuxuryReservationModal from './reservation/LuxuryReservationModal';
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);  const [user, loading] = useAuthState(auth);
+  const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
+  const { user, loading } = useUserAuthOnly();
   const location = useLocation();
   // Handle scroll effects with improved performance
   useEffect(() => {
@@ -106,11 +106,17 @@ const Navigation = () => {
             {/* Auth Section */}
             <div className="hidden lg:flex items-center space-x-4">
               {loading ? (
-                <div className="w-8 h-8 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
-              ) : user ? (
+                <div className="w-8 h-8 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />              ) : user ? (
                 <div className="flex items-center space-x-3">
                   <Link
-                    to="/user-dashboard"
+                    to="/my-orders"
+                    className="flex items-center gap-2 text-cream hover:text-amber-400 transition-colors duration-300 font-medium"
+                  >
+                    <Package size={20} />
+                    <span>My Orders</span>
+                  </Link>
+                  <Link
+                    to="/dashboard"
                     className="flex items-center gap-2 text-cream hover:text-amber-400 transition-colors duration-300 font-medium"
                   >
                     <User size={20} />
@@ -268,16 +274,25 @@ const Navigation = () => {
                 {loading ? (
                   <div className="flex justify-center">
                     <div className="w-8 h-8 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                  </div>                ) : user ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Link
+                      to="/my-orders"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center justify-center gap-2 bg-amber-600/20 border border-amber-600/30 text-amber-400 font-medium py-3 px-4 rounded-lg hover:bg-amber-600/30 transition-colors"
+                    >
+                      <Package size={18} />
+                      <span>My Orders</span>
+                    </Link>
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center justify-center gap-2 bg-amber-600/20 border border-amber-600/30 text-amber-400 font-medium py-3 px-4 rounded-lg hover:bg-amber-600/30 transition-colors"
+                    >
+                      <User size={18} />
+                      <span>My Dashboard</span>
+                    </Link>
                   </div>
-                ) : user ? (
-                  <Link
-                    to="/user-dashboard"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center justify-center gap-2 bg-amber-600/20 border border-amber-600/30 text-amber-400 font-medium py-3 px-4 rounded-lg hover:bg-amber-600/30 transition-colors"
-                  >
-                    <User size={18} />
-                    <span>My Dashboard</span>
-                  </Link>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
                     <Link

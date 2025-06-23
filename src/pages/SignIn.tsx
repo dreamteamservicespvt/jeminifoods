@@ -117,8 +117,7 @@ const SignIn = () => {
         playFeedback('success');
       } else if (isSignUp) {
         // Create new account
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          // Create user profile in Firestore with appropriate role
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);        // Create user profile in Firestore with appropriate role
         const isAdmin = email === 'admin@jeminifoods.com';
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           name,
@@ -234,8 +233,7 @@ const SignIn = () => {
         
         // Redirect to appropriate dashboard based on role
         navigate(isAdmin ? '/admin/dashboard' : '/user-dashboard');
-      } else {
-        // If user exists in auth but not in Firestore, create user doc
+      } else {        // If user exists in auth but not in Firestore, create user doc
         // This could happen if auth was created but Firestore doc failed
         const isAdmin = data.email === 'admin@jeminifoods.com';
         await setDoc(doc(db, 'users', uid), {

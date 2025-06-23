@@ -4,7 +4,7 @@ import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format } from 'date-fns';
 import confetti from 'canvas-confetti';
-import { Calendar, Clock, Users, Phone, Mail, User, CheckCircle, ChevronRight, ChevronLeft, X, Volume2, Volume } from 'lucide-react';
+import { Calendar, Clock, Users, Phone, Mail, User, CheckCircle, ChevronRight, ChevronLeft, X, Volume2, Volume, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -823,10 +823,12 @@ const LuxuryReservationModal: React.FC<LuxuryReservationModalProps> = ({ isOpen,
                           )}
                         </div>
                         
-                        <div className="bg-amber-600/10 border border-amber-600/30 p-4 rounded-lg">
-                          <p className="text-cream/80 text-sm">
-                            We'll send a confirmation to your email once your reservation is approved.
-                            You may receive a call to confirm details for special arrangements.
+                        <div className="bg-amber-600/10 border border-amber-600/30 p-4 rounded-lg">                          <p className="text-cream/80 text-sm flex items-start gap-2">
+                            <AlertCircle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                            <span>
+                              We'll send a confirmation to your WhatsApp once your reservation is approved. 
+                              You may receive a call for special arrangements.
+                            </span>
                           </p>
                         </div>
                       </motion.div>

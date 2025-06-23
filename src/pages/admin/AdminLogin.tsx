@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '../../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { useAdminAuthOnly } from '../../contexts/MultiAuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { LogIn, Mail, Lock, AlertCircle, ShieldAlert } from 'lucide-react';
 
-const AdminLogin = () => {  const [email, setEmail] = useState('');
+const AdminLogin = () => {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { signInAsAdmin } = useAdminAuthOnly();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,31 +18,12 @@ const AdminLogin = () => {  const [email, setEmail] = useState('');
     setError('');
 
     try {
-      // Verify credentials
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const uid = userCredential.user.uid;
-      
-      // Check if user has admin role
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      
-      if (userDoc.exists() && userDoc.data().role === 'admin') {
-        // Admin login successful, navigate to admin dashboard
-        navigate('/admin/dashboard');
-      } else {
-        // User exists but is not an admin
-        setError('You do not have administrator privileges.');
-      }
+      await signInAsAdmin(email, password);
+      // If successful, navigate to admin dashboard
+      navigate('/admin/dashboard');
     } catch (error: any) {
-      console.error('Login error:', error);
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        setError('Invalid email or password. Please try again.');
-      } else if (error.code === 'auth/too-many-requests') {
-        setError('Too many unsuccessful login attempts. Please try again later.');
-      } else if (error.code?.includes('api-key-not-valid')) {
-        setError('Authentication service error. Please contact support.');
-      } else {
-        setError('An error occurred. Please try again later.');
-      }
+      console.error('Admin login error:', error);
+      setError(error.message || 'An error occurred during login. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -68,12 +49,11 @@ const AdminLogin = () => {  const [email, setEmail] = useState('');
             <div className="relative">
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-amber-400/70">
                 <Mail size={18} />
-              </div>
-              <input
+              </div>              <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
+                placeholder="admin@jeminifoods.com"
                 required
                 className="w-full bg-charcoal border border-amber-600/30 text-cream pl-10 pr-4 py-3 focus:border-amber-400 focus:outline-none rounded"
               />

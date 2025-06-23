@@ -1,26 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { signOut } from 'firebase/auth';
-import { auth, db } from '../lib/firebase';
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '../lib/firebase';
-import { signOut } from 'firebase/auth';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { updateProfile } from 'firebase/auth';
+import { useUserAuthOnly } from '../contexts/MultiAuthContext';
+import { auth, db, storage } from '../lib/firebase';
+import { doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, Mail, Phone, Calendar, MapPin, Clock, 
   Settings, LogOut, Bell, Star, Award, 
   ChefHat, Utensils, Heart, Edit2, Camera,
   CreditCard, Gift, Bookmark, History, ArrowRight,
-  MessageSquare, Headphones, HelpCircle, Users
+  MessageSquare, Headphones, HelpCircle, Users,
+  Upload, X, Image as ImageIcon, UtensilsCrossed,
+  RefreshCw, Loader2
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Avatar } from '../components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/avatar';
+import { toast } from '../hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { ReservationItem } from '../components/dashboard/ReservationItem';
+import { PreOrderItem } from '../components/dashboard/PreOrderItem';
+import { NotificationSettings } from '../components/notifications/NotificationSettings';
+import useDashboardData from '../hooks/useDashboardData';
 
 interface UserProfile {
   id: string;
@@ -32,38 +36,38 @@ interface UserProfile {
   provider: string;
 }
 
-interface Reservation {
+interface Favorite {
   id: string;
-  date: string;
-  time: string;
-  guests: number;
-  seatingPreference: string;
-  status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
-  createdAt: any;
-  specialRequests?: string;
-}
-
-interface PreOrder {
-  id: string;
-  items: any[];
-  total: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed';
-  pickupDate: string;
-  pickupTime: string;
+  itemId: string;
+  itemType: 'menuItem' | 'gallery';
+  name: string;
+  description: string;
+  imageUrl: string;
   createdAt: any;
 }
 
 const UserDashboard = () => {
-  const [user, loading, error] = useAuthState(auth);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [preOrders, setPreOrders] = useState<PreOrder[]>([]);
+  const { user, userProfile, loading, logout } = useUserAuthOnly();
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     fullName: '',
     phone: ''
   });
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<string>("reservations");
+  
+  // Using our custom dashboard data hook with real-time updates
+  const {
+    reservations,
+    preOrders,
+    favorites,
+    loading: loadingDashboard,
+    refreshing,
+    refreshData
+  } = useDashboardData(true); // Enable real-time updates for orders/reservations
 
   const navigate = useNavigate();
 
@@ -74,60 +78,83 @@ const UserDashboard = () => {
     }
   }, [user, loading, navigate]);
 
-  // Fetch user profile and data
+  // Fetch user profile
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchUserProfile = async () => {
       if (!user) return;
       
       try {
         setIsLoadingData(true);
-        
         // Fetch user profile
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));        if (userDoc.exists()) {
           const profileData = { id: userDoc.id, ...userDoc.data() } as UserProfile;
-          setUserProfile(profileData);
+          // setUserProfile(profileData); // Handled by auth context
           setEditForm({
             fullName: profileData.fullName,
             phone: profileData.phone
           });
+        } else {
+          // Create a default profile if none exists
+          const defaultProfile: UserProfile = {
+            id: user.uid,
+            fullName: user.displayName || 'User',
+            email: user.email || '',
+            phone: '',
+            profileImage: user.photoURL || null,
+            createdAt: new Date(),
+            provider: user.providerData[0]?.providerId || 'email'
+          };
+          // Save the default profile to Firestore
+          await setDoc(doc(db, 'users', user.uid), {
+            fullName: defaultProfile.fullName,
+            email: defaultProfile.email,
+            phone: defaultProfile.phone,
+            profileImage: defaultProfile.profileImage,
+            createdAt: defaultProfile.createdAt,
+            provider: defaultProfile.provider          });
+          
+          // setUserProfile(defaultProfile); // Handled by auth context
+          setEditForm({
+            fullName: defaultProfile.fullName,
+            phone: defaultProfile.phone
+          });
         }
-
-        // Fetch reservations
-        const reservationsQuery = query(
-          collection(db, 'reservations'),
-          where('userId', '==', user.uid),
-          orderBy('createdAt', 'desc')
-        );
-        const reservationsSnapshot = await getDocs(reservationsQuery);
-        const reservationsData = reservationsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Reservation[];
-        setReservations(reservationsData);
-
-        // Fetch pre-orders
-        const preOrdersQuery = query(
-          collection(db, 'preOrders'),
-          where('userId', '==', user.uid),
-          orderBy('createdAt', 'desc')
-        );
-        const preOrdersSnapshot = await getDocs(preOrdersQuery);
-        const preOrdersData = preOrdersSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as PreOrder[];
-        setPreOrders(preOrdersData);
-        
       } catch (error) {
-        console.error('Error fetching user data:', error);
+        console.error('Error fetching user profile:', error);
       } finally {
         setIsLoadingData(false);
       }
     };
 
-    fetchUserData();
+    fetchUserProfile();
   }, [user]);
+
+  // Format date helper function
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString('en-US', { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
+
+  // Get status color helper function
+  const getStatusColor = (status: string) => {
+    const statusColors: Record<string, string> = {
+      confirmed: 'bg-green-500/20 text-green-400 border-green-400/30',
+      pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-400/30',
+      cancelled: 'bg-red-500/20 text-red-400 border-red-400/30',
+      completed: 'bg-blue-500/20 text-blue-400 border-blue-400/30',
+      booked: 'bg-blue-500/20 text-blue-400 border-blue-400/30',
+      taken: 'bg-purple-500/20 text-purple-400 border-purple-400/30',
+      making: 'bg-yellow-500/20 text-yellow-400 border-yellow-400/30',
+      ready: 'bg-green-500/20 text-green-400 border-green-400/30'
+    };
+    
+    return statusColors[status] || 'bg-gray-500/20 text-gray-400 border-gray-400/30';
+  };
 
   // Handle profile update
   const handleUpdateProfile = async () => {
@@ -137,72 +164,103 @@ const UserDashboard = () => {
       await updateDoc(doc(db, 'users', user.uid), {
         fullName: editForm.fullName,
         phone: editForm.phone,
-        updatedAt: new Date()
-      });
+        updatedAt: new Date()      });
       
-      setUserProfile({
-        ...userProfile,
-        fullName: editForm.fullName,
-        phone: editForm.phone
+      // setUserProfile({
+      //   ...userProfile,
+      //   fullName: editForm.fullName,
+      //   phone: editForm.phone
+      // }); // Profile updates handled by auth context
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated",
+        variant: "default",
       });
       
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Could not update profile",
+        variant: "destructive",
+      });
     }
   };
-
   // Handle sign out
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
+      await logout();
       navigate('/');
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('Error signing out:', error);
     }
   };
 
-  // Format date
-  const formatDate = (date: any) => {
-    if (!date) return '';
-    const d = date.toDate ? date.toDate() : new Date(date);
-    return d.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-  };
-
-  // Get status color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed': case 'ready': return 'bg-green-500/20 text-green-400 border-green-400/30';
-      case 'pending': case 'preparing': return 'bg-yellow-500/20 text-yellow-400 border-yellow-400/30';
-      case 'cancelled': return 'bg-red-500/20 text-red-400 border-red-400/30';
-      case 'completed': return 'bg-blue-500/20 text-blue-400 border-blue-400/30';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-400/30';
+  // Handle image upload
+  const handleImageUpload = async (file: File) => {
+    if (!user || !file) return;
+    
+    setIsUploadingImage(true);
+    
+    try {
+      // Create a storage reference
+      const storageRef = ref(storage, `profileImages/${user.uid}`);
+      
+      // Upload the file
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      // Update the user profile in Firebase Auth
+      await updateProfile(user, {
+        photoURL: downloadURL
+      });
+      
+      // Update the user profile in Firestore
+      await updateDoc(doc(db, 'users', user.uid), {
+        profileImage: downloadURL      });
+      
+      // setUserProfile({
+      //   ...userProfile,
+      //   profileImage: downloadURL
+      // }); // Profile updates handled by auth context
+      toast({
+        title: "Image Uploaded",
+        description: "Your profile picture has been updated",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Error",
+        description: "Error uploading image",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: { 
+    show: {
       opacity: 1,
-      transition: { staggerChildren: 0.1 }
+      transition: {
+        staggerChildren: 0.1
+      }
     }
   };
-
+  
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
+    show: { opacity: 1, y: 0 }
   };
-
+  
   const cardHoverVariants = {
-    rest: { scale: 1, y: 0 },
+    rest: { scale: 1 },
     hover: { 
-      scale: 1.02, 
-      y: -4,
+      scale: 1.02,
       transition: { 
         type: "spring", 
         stiffness: 400, 
@@ -210,56 +268,84 @@ const UserDashboard = () => {
       }
     }
   };
-
-  if (loading || isLoadingData) {
+  if (loading || isLoadingData || loadingDashboard) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-charcoal via-black to-charcoal flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-amber-400/30 border-t-amber-400 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-cream/70">Loading your dashboard...</p>
+        <div className="text-center p-8">
+          <div className="w-16 h-16 border-4 border-amber-400/30 border-t-amber-400 rounded-full animate-spin mx-auto mb-6" />
+          <h2 className="text-xl text-amber-400 font-serif mb-2">Loading your dashboard...</h2>
+          <p className="text-cream/70">Please wait while we prepare your experience</p>
         </div>
       </div>
     );
   }
 
-  if (!user || !userProfile) {
-    return null;
+  if (!user) {
+    return null; // Will redirect to login via useEffect
+  }  if (!userProfile) {
+    return (
+      <div className="min-h-screen pt-20 bg-gradient-to-br from-charcoal via-black to-charcoal flex items-center justify-center">
+        <div className="text-center bg-black/40 rounded-lg border border-amber-600/20 p-8 max-w-md">
+          <div className="text-amber-400 mb-4">
+            <User className="w-12 h-12 mx-auto" />
+          </div>
+          <h2 className="text-xl text-amber-400 font-serif mb-4">Setting up your profile...</h2>
+          <div className="w-12 h-12 border-4 border-amber-400/30 border-t-amber-400 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-cream/70">This will only take a moment</p>
+        </div>
+      </div>
+    );
   }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-charcoal via-black to-charcoal">
-      {/* Header */}
-      <motion.header 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-black/40 backdrop-blur-xl border-b border-amber-600/20 px-4 py-6"
-      >
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+    <div className="min-h-screen pt-20 bg-gradient-to-br from-charcoal via-black to-charcoal">
+      {/* Hidden file input for image upload */}
+      <input 
+        ref={fileInputRef} 
+        type="file" 
+        accept="image/*" 
+        className="hidden" 
+        onChange={(e) => {
+          if (e.target.files?.[0]) {
+            handleImageUpload(e.target.files[0]);
+          }
+        }} 
+      />
+      
+      {/* Page Title Banner */}
+      <div className="bg-black/50 backdrop-blur-sm py-8 border-b border-amber-600/20 mb-8">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 px-4"
+        >
+          <div className="flex items-center gap-6">
             <div className="relative">
-              <Avatar className="w-16 h-16 border-2 border-amber-600/30">
+              <Avatar className="w-20 h-20 border-2 border-amber-600/30 ring-4 ring-black/50">
                 {userProfile.profileImage ? (
-                  <img src={userProfile.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                  <AvatarImage src={userProfile.profileImage} alt="Profile" />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-amber-600 to-amber-400 flex items-center justify-center">
-                    <User className="w-8 h-8 text-black" />
-                  </div>
+                  <AvatarFallback className="bg-gradient-to-br from-amber-600 to-amber-400">
+                    <User className="w-10 h-10 text-black" />
+                  </AvatarFallback>
                 )}
               </Avatar>
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className="absolute -bottom-1 -right-1 w-6 h-6 bg-amber-600 rounded-full flex items-center justify-center"
+                className="absolute -bottom-2 -right-2 w-8 h-8 bg-amber-600 hover:bg-amber-500 rounded-full flex items-center justify-center shadow-lg shadow-black/30 transition-colors duration-200"
+                onClick={() => {
+                  fileInputRef.current?.click();
+                }}
               >
-                <Camera className="w-3 h-3 text-black" />
+                <Camera className="w-4 h-4 text-black" />
               </motion.button>
             </div>
             
-            <div className="text-center sm:text-left">
-              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-amber-400">
+            <div className="text-center md:text-left">
+              <h1 className="text-3xl sm:text-4xl font-serif font-bold text-amber-400">
                 Welcome, {userProfile.fullName.split(' ')[0]}!
               </h1>
-              <p className="text-cream/70">Member since {formatDate(userProfile.createdAt)}</p>
+              <p className="text-cream/70 text-lg">Member since {formatDate(userProfile.createdAt)}</p>
             </div>
           </div>
 
@@ -270,7 +356,7 @@ const UserDashboard = () => {
               className="border-amber-600/30 text-amber-400 hover:bg-amber-600/10"
             >
               <Bell className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Notifications</span>
+              <span>Notifications</span>
             </Button>
             
             <Button
@@ -280,31 +366,22 @@ const UserDashboard = () => {
               className="border-red-400/30 text-red-400 hover:bg-red-400/10"
             >
               <LogOut className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Sign Out</span>
+              <span>Sign Out</span>
             </Button>
           </div>
-        </div>
-      </motion.header>
+        </motion.div>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <motion.div
+      {/* Dashboard Content */}
+      <div className="max-w-7xl mx-auto px-4 pb-12">
+        {/* Quick Stats */}
+        <motion.div 
           variants={containerVariants}
           initial="hidden"
-          animate="visible"
-          className="space-y-8"
+          animate="show"
+          className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8"
         >
-          {/* Welcome Message & Quick Stats */}
-          <motion.div variants={itemVariants} className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-cream mb-4">
-              Your Dining Journey
-            </h2>
-            <p className="text-cream/70 text-lg max-w-2xl mx-auto">
-              Manage your reservations, track your pre-orders, and stay connected with our team.
-            </p>
-          </motion.div>
-
-          {/* Quick Stats Cards */}
-          <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+          <motion.div variants={itemVariants}>
             <Card className="bg-black/40 border-amber-600/20 p-4 sm:p-6 text-center">
               <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mx-auto mb-3">
                 <Calendar className="w-6 h-6 text-blue-400" />
@@ -312,336 +389,289 @@ const UserDashboard = () => {
               <p className="text-2xl font-bold text-cream">{reservations.length}</p>
               <p className="text-cream/70 text-sm">Reservations</p>
             </Card>
-
+          </motion.div>
+          
+          <motion.div variants={itemVariants}>
             <Card className="bg-black/40 border-amber-600/20 p-4 sm:p-6 text-center">
               <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <Utensils className="w-6 h-6 text-green-400" />
+                <ChefHat className="w-6 h-6 text-green-400" />
               </div>
               <p className="text-2xl font-bold text-cream">{preOrders.length}</p>
               <p className="text-cream/70 text-sm">Pre-Orders</p>
             </Card>
-
-            <Card className="bg-black/40 border-amber-600/20 p-4 sm:p-6 text-center">
-              <div className="w-12 h-12 bg-amber-500/20 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <Star className="w-6 h-6 text-amber-400" />
-              </div>
-              <p className="text-2xl font-bold text-cream">1,250</p>
-              <p className="text-cream/70 text-sm">Loyalty Points</p>
-            </Card>
-
+          </motion.div>
+          
+          <motion.div variants={itemVariants}>
             <Card className="bg-black/40 border-amber-600/20 p-4 sm:p-6 text-center">
               <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mx-auto mb-3">
                 <Heart className="w-6 h-6 text-purple-400" />
               </div>
-              <p className="text-2xl font-bold text-cream">8</p>
+              <p className="text-2xl font-bold text-cream">{favorites.length}</p>
               <p className="text-cream/70 text-sm">Favorites</p>
             </Card>
           </motion.div>
+        </motion.div>
 
-          {/* Main Three Sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Pre-Orders Section */}
-            <motion.div variants={itemVariants}>
-              <motion.div
-                variants={cardHoverVariants}
-                initial="rest"
-                whileHover="hover"
-                className="h-full"
-              >
-                <Card className="bg-gradient-to-br from-green-900/20 to-green-800/20 border-green-500/30 p-6 sm:p-8 h-full flex flex-col">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 bg-green-500/20 rounded-xl flex items-center justify-center">
-                        <Utensils className="w-7 h-7 text-green-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl sm:text-2xl font-serif font-bold text-green-400">Pre-Orders</h3>
-                        <p className="text-cream/70 text-sm">Quick pickup ordering</p>
-                      </div>
-                    </div>
-                    <Badge className="bg-green-500/20 text-green-400 border-green-400/30">
-                      {preOrders.length} Active
-                    </Badge>
-                  </div>
-
-                  <div className="flex-1 space-y-4 mb-6">
-                    {preOrders.slice(0, 3).map((order) => (
-                      <div key={order.id} className="bg-black/30 rounded-lg p-4 border border-green-500/20">
-                        <div className="flex justify-between items-start mb-2">
-                          <p className="text-cream font-medium">Order #{order.id.slice(-6)}</p>
-                          <Badge className={`text-xs ${getStatusColor(order.status)}`}>
-                            {order.status}
-                          </Badge>
-                        </div>
-                        <p className="text-cream/70 text-sm">${order.total.toFixed(2)} • {order.items.length} items</p>
-                        <p className="text-cream/60 text-xs mt-1">Pickup: {order.pickupDate}</p>
-                      </div>
-                    ))}
-
-                    {preOrders.length === 0 && (
-                      <div className="text-center py-8">
-                        <ChefHat className="w-12 h-12 text-green-400/30 mx-auto mb-3" />
-                        <p className="text-cream/60">No pre-orders yet</p>
-                        <p className="text-cream/40 text-sm">Start ordering for quick pickup</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button 
-                      onClick={() => navigate('/pre-orders')}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2 transition-all duration-200"
-                    >
-                      <Utensils className="w-4 h-4" />
-                      {preOrders.length > 0 ? 'View All Pre-Orders' : 'Start Pre-Ordering'}
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </motion.div>
-                </Card>
-              </motion.div>
-            </motion.div>
-
-            {/* Reservations Section */}
-            <motion.div variants={itemVariants}>
-              <motion.div
-                variants={cardHoverVariants}
-                initial="rest"
-                whileHover="hover"
-                className="h-full"
-              >
-                <Card className="bg-gradient-to-br from-blue-900/20 to-blue-800/20 border-blue-500/30 p-6 sm:p-8 h-full flex flex-col">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                        <Calendar className="w-7 h-7 text-blue-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl sm:text-2xl font-serif font-bold text-blue-400">Reservations</h3>
-                        <p className="text-cream/70 text-sm">Dining experiences</p>
-                      </div>
-                    </div>
-                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-400/30">
-                      {reservations.length} Total
-                    </Badge>
-                  </div>
-
-                  <div className="flex-1 space-y-4 mb-6">
-                    {reservations.slice(0, 3).map((reservation) => (
-                      <div key={reservation.id} className="bg-black/30 rounded-lg p-4 border border-blue-500/20">
-                        <div className="flex justify-between items-start mb-2">
-                          <p className="text-cream font-medium">{formatDate(reservation.date)}</p>
-                          <Badge className={`text-xs ${getStatusColor(reservation.status)}`}>
-                            {reservation.status}
-                          </Badge>
-                        </div>
-                        <p className="text-cream/70 text-sm">{reservation.time} • {reservation.guests} guests</p>
-                        <p className="text-cream/60 text-xs mt-1">{reservation.seatingPreference}</p>
-                      </div>
-                    ))}
-
-                    {reservations.length === 0 && (
-                      <div className="text-center py-8">
-                        <Users className="w-12 h-12 text-blue-400/30 mx-auto mb-3" />
-                        <p className="text-cream/60">No reservations yet</p>
-                        <p className="text-cream/40 text-sm">Book your dining experience</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button 
-                      onClick={() => navigate('/reservations')}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg flex items-center justify-center gap-2 transition-all duration-200"
-                    >
-                      <Calendar className="w-4 h-4" />
-                      {reservations.length > 0 ? 'View All Reservations' : 'Make a Reservation'}
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </motion.div>
-                </Card>
-              </motion.div>
-            </motion.div>
-
-            {/* Contact Section */}
-            <motion.div variants={itemVariants}>
-              <motion.div
-                variants={cardHoverVariants}
-                initial="rest"
-                whileHover="hover"
-                className="h-full"
-              >
-                <Card className="bg-gradient-to-br from-amber-900/20 to-amber-800/20 border-amber-500/30 p-6 sm:p-8 h-full flex flex-col">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 bg-amber-500/20 rounded-xl flex items-center justify-center">
-                        <MessageSquare className="w-7 h-7 text-amber-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl sm:text-2xl font-serif font-bold text-amber-400">Contact</h3>
-                        <p className="text-cream/70 text-sm">Get in touch with us</p>
-                      </div>
-                    </div>
-                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-400/30">
-                      24/7 Support
-                    </Badge>
-                  </div>
-
-                  <div className="flex-1 space-y-4 mb-6">
-                    <motion.div 
-                      whileHover={{ x: 4 }}
-                      className="bg-black/30 rounded-lg p-4 border border-amber-500/20 cursor-pointer"
-                      onClick={() => navigate('/contact')}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Phone className="w-5 h-5 text-amber-400" />
-                        <div>
-                          <p className="text-cream font-medium">Call Us</p>
-                          <p className="text-cream/70 text-sm">+1 (555) 123-4567</p>
-                        </div>
-                      </div>
-                    </motion.div>
-
-                    <motion.div 
-                      whileHover={{ x: 4 }}
-                      className="bg-black/30 rounded-lg p-4 border border-amber-500/20 cursor-pointer"
-                      onClick={() => navigate('/contact')}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Mail className="w-5 h-5 text-amber-400" />
-                        <div>
-                          <p className="text-cream font-medium">Email Support</p>
-                          <p className="text-cream/70 text-sm">support@jeminifoods.com</p>
-                        </div>
-                      </div>
-                    </motion.div>
-
-                    <motion.div 
-                      whileHover={{ x: 4 }}
-                      className="bg-black/30 rounded-lg p-4 border border-amber-500/20 cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Headphones className="w-5 h-5 text-amber-400" />
-                        <div>
-                          <p className="text-cream font-medium">Live Chat</p>
-                          <p className="text-cream/70 text-sm">Available now</p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  </div>
-
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button 
-                      onClick={() => navigate('/contact')}
-                      className="w-full bg-amber-600 hover:bg-amber-700 text-black font-medium py-3 rounded-lg flex items-center justify-center gap-2 transition-all duration-200"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      Contact Support
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </motion.div>
-                </Card>
-              </motion.div>
-            </motion.div>
-          </div>
-
-          {/* Profile Settings Section */}
-          <motion.div variants={itemVariants} className="mt-12">
-            <Card className="bg-black/40 border-amber-600/20 p-6 sm:p-8">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <div>
-                  <h2 className="text-2xl sm:text-3xl font-serif font-bold text-amber-400 mb-2">Profile Settings</h2>
-                  <p className="text-cream/70">Manage your account information and preferences</p>
-                </div>
-                <Button
-                  onClick={() => setIsEditing(!isEditing)}
-                  variant="outline"
-                  className="border-amber-600/30 text-amber-400 hover:bg-amber-600/10 min-w-fit"
+        {/* Main Content with Tabbed Interface */}
+        <motion.div variants={containerVariants} initial="hidden" animate="show">
+          <motion.div variants={itemVariants}>
+            <Card className="bg-black/40 border-amber-600/20 p-4 sm:p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-serif font-bold text-amber-400">Your Activities</h2>
+                
+                <Button 
+                  onClick={refreshData}
+                  variant="outline" 
+                  size="sm" 
+                  className="border-amber-600/30 text-amber-400 hover:bg-amber-600/10"
+                  disabled={refreshing}
                 >
-                  <Edit2 className="w-4 h-4 mr-2" />
-                  {isEditing ? 'Cancel' : 'Edit Profile'}
+                  {refreshing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <span>Refreshing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      <span>Refresh</span>
+                    </>
+                  )}
                 </Button>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="text-sm font-medium text-amber-400 mb-2 block flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Full Name
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editForm.fullName}
-                      onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
-                      className="w-full bg-charcoal/50 border border-amber-600/30 text-cream px-4 py-3 rounded-lg focus:outline-none focus:border-amber-400 transition-colors"
-                    />
+                <Tabs defaultValue="reservations" className="w-full" onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-3 mb-6">
+                  <TabsTrigger value="reservations" className="text-lg">
+                    <Calendar className="w-4 h-4 mr-2" /> Reservations
+                  </TabsTrigger>
+                  <TabsTrigger value="preOrders" className="text-lg">
+                    <Utensils className="w-4 h-4 mr-2" /> Pre-Orders
+                  </TabsTrigger>
+                  <TabsTrigger value="settings" className="text-lg">
+                    <Settings className="w-4 h-4 mr-2" /> Settings
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="reservations" className="space-y-4 mt-2">
+                  {reservations.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Users className="w-16 h-16 text-blue-400/30 mx-auto mb-4" />
+                      <p className="text-cream/60 text-lg mb-2">You have no reservations yet</p>
+                      <p className="text-cream/40 mb-6">Book a table to experience our culinary excellence</p>
+                      <Button 
+                        onClick={() => navigate('/reservations')}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        Make a Reservation
+                      </Button>
+                    </div>
                   ) : (
-                    <p className="text-cream bg-charcoal/30 px-4 py-3 rounded-lg">
-                      {userProfile.fullName}
-                    </p>
+                    <>
+                      {reservations.map((reservation) => (
+                        <ReservationItem 
+                          key={reservation.id}
+                          id={reservation.id}
+                          date={reservation.date}
+                          time={reservation.time}
+                          partySize={reservation.partySize}
+                          specialRequests={reservation.specialRequests}
+                          status={reservation.status}
+                          createdAt={reservation.createdAt}
+                          onViewDetails={(id) => navigate(`/reservations?view=${id}`)}
+                        />
+                      ))}
+                      <div className="flex justify-center mt-6">
+                        <Button 
+                          onClick={() => navigate('/reservations')}
+                          variant="outline"
+                          className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                        >
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Make a New Reservation
+                        </Button>
+                      </div>
+                    </>
                   )}
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-amber-400 mb-2 block flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    Email Address
-                  </label>
-                  <p className="text-cream bg-charcoal/30 px-4 py-3 rounded-lg opacity-70">
-                    {userProfile.email}
-                  </p>
-                  <p className="text-cream/50 text-xs mt-1">Email cannot be changed</p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-amber-400 mb-2 block flex items-center gap-2">
-                    <Phone className="w-4 h-4" />
-                    Phone Number
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="tel"
-                      value={editForm.phone}
-                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      className="w-full bg-charcoal/50 border border-amber-600/30 text-cream px-4 py-3 rounded-lg focus:outline-none focus:border-amber-400 transition-colors"
-                    />
+                </TabsContent>
+                
+                <TabsContent value="preOrders" className="space-y-4 mt-2">
+                  {preOrders.length === 0 ? (
+                    <div className="text-center py-12">
+                      <UtensilsCrossed className="w-16 h-16 text-green-400/30 mx-auto mb-4" />
+                      <p className="text-cream/60 text-lg mb-2">You have no pre-orders yet</p>
+                      <p className="text-cream/40 mb-6">Order ahead and skip the wait</p>
+                      <Button 
+                        onClick={() => navigate('/pre-orders')}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        Start Pre-Ordering
+                      </Button>
+                    </div>
                   ) : (
-                    <p className="text-cream bg-charcoal/30 px-4 py-3 rounded-lg">
-                      {userProfile.phone || 'Not provided'}
-                    </p>
+                    <>
+                      {preOrders.map((order) => (
+                        <PreOrderItem 
+                          key={order.id}
+                          id={order.id}
+                          items={order.items}
+                          total={order.total}
+                          status={order.status}
+                          pickupDate={order.pickupDate}
+                          pickupTime={order.pickupTime}
+                          createdAt={order.createdAt}
+                          assignedChef={order.assignedChef}
+                          estimatedReadyTime={order.estimatedReadyTime}
+                          onRefresh={refreshData}
+                          isRefreshing={refreshing}
+                        />
+                      ))}
+                      <div className="flex justify-center mt-6">
+                        <Button 
+                          onClick={() => navigate('/pre-orders')}
+                          variant="outline"
+                          className="border-green-500/30 text-green-400 hover:bg-green-500/10"
+                        >
+                          <Utensils className="w-4 h-4 mr-2" />
+                          Place a New Pre-Order
+                        </Button>
+                      </div>
+                    </>
                   )}
-                </div>
+                </TabsContent>
+                
+                <TabsContent value="settings" className="space-y-6 mt-2">
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-xl font-semibold text-amber-400 mb-4">Account Settings</h3>
+                      <NotificationSettings />
+                    </div>
+                    
+                    <div className="bg-black/30 border border-amber-600/20 rounded-lg p-6">
+                      <h4 className="text-lg font-semibold text-cream mb-4">Profile Information</h4>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-cream/70 text-sm mb-1">Full Name</label>
+                            <p className="text-cream">{userProfile?.fullName || 'Not set'}</p>
+                          </div>
+                          <div>
+                            <label className="block text-cream/70 text-sm mb-1">Email</label>
+                            <p className="text-cream">{userProfile?.email}</p>
+                          </div>
+                          <div>
+                            <label className="block text-cream/70 text-sm mb-1">Phone</label>
+                            <p className="text-cream">{userProfile?.phone || 'Not set'}</p>
+                          </div>
+                          <div>
+                            <label className="block text-cream/70 text-sm mb-1">Member Since</label>
+                            <p className="text-cream">
+                              {userProfile?.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="pt-4 border-t border-amber-600/20">
+                          <Button
+                            onClick={() => setIsEditing(true)}
+                            variant="outline"
+                            className="border-amber-600/30 text-amber-400 hover:bg-amber-600/10"
+                          >
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Edit Profile
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </Card>
+          </motion.div>
 
-                <div>
-                  <label className="text-sm font-medium text-amber-400 mb-2 block flex items-center gap-2">
-                    <CreditCard className="w-4 h-4" />
-                    Account Type
-                  </label>
-                  <p className="text-cream bg-charcoal/30 px-4 py-3 rounded-lg">
-                    {userProfile.provider === 'google' ? 'Google Account' : 'Email Account'}
-                  </p>
+          {/* Favorites Section */}
+          <motion.div variants={itemVariants} className="mt-8">
+            <Card className="bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-500/30 p-6 sm:p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                    <Heart className="w-7 h-7 text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-serif font-bold text-purple-400">Your Favorites</h3>
+                    <p className="text-cream/70 text-sm">Items you've saved</p>
+                  </div>
                 </div>
+                <Badge className="bg-purple-500/20 text-purple-400 border-purple-400/30">
+                  {favorites.length} {favorites.length === 1 ? 'Item' : 'Items'}
+                </Badge>
+              </div>
+              
+              <div className="space-y-4 mb-6">
+                {favorites.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Heart className="w-12 h-12 text-purple-400/30 mx-auto mb-3" />
+                    <p className="text-cream/60">No favorites yet</p>
+                    <p className="text-cream/40 text-sm">Save menu items or gallery content</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {favorites.map((favorite) => (
+                      <div 
+                        key={favorite.id} 
+                        className="bg-black/30 rounded-lg p-3 border border-purple-500/20 flex gap-3 cursor-pointer"
+                        onClick={() => navigate(
+                          favorite.itemType === 'menuItem' 
+                            ? `/menu?item=${favorite.itemId}` 
+                            : `/gallery?view=${favorite.itemId}`
+                        )}
+                      >
+                        <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                          <img 
+                            src={favorite.imageUrl} 
+                            alt={favorite.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="text-cream font-medium truncate">{favorite.name}</p>
+                            <Badge className={
+                              favorite.itemType === 'menuItem' 
+                                ? 'bg-amber-500/20 text-amber-400 border-amber-400/30' 
+                                : 'bg-blue-500/20 text-blue-400 border-blue-400/30'
+                            }>
+                              {favorite.itemType === 'menuItem' ? 'Menu' : 'Gallery'}
+                            </Badge>
+                          </div>
+                          <p className="text-cream/70 text-xs line-clamp-2 mt-1">{favorite.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {isEditing && (
-                <div className="flex flex-col sm:flex-row gap-3 pt-6 mt-6 border-t border-amber-600/20">
-                  <Button
-                    onClick={handleUpdateProfile}
-                    className="bg-amber-600 hover:bg-amber-700 text-black font-medium"
-                  >
-                    Save Changes
-                  </Button>
-                  <Button
-                    onClick={() => setIsEditing(false)}
-                    variant="outline"
-                    className="border-amber-600/30 text-amber-400 hover:bg-amber-600/10"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              )}
-            </Card>          </motion.div>        </motion.div>
+              <div className="grid grid-cols-2 gap-3">
+                <Button 
+                  onClick={() => navigate('/menu')}
+                  variant="outline"
+                  className="border-amber-400/30 text-amber-400 hover:bg-amber-400/10"
+                >
+                  <Utensils className="w-4 h-4 mr-2" />
+                  Browse Menu
+                </Button>
+                <Button 
+                  onClick={() => navigate('/gallery')}
+                  variant="outline"
+                  className="border-blue-400/30 text-blue-400 hover:bg-blue-400/10"
+                >
+                  <ImageIcon className="w-4 h-4 mr-2" />
+                  View Gallery
+                </Button>
+              </div>
+            </Card>
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );
