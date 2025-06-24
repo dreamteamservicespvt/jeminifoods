@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Calendar } from 'lucide-react';
-import LuxuryReservationModal from '../reservation/LuxuryReservationModal';
+import { Link } from 'react-router-dom';
 
 interface ReservationButtonProps {
   variant?: 'default' | 'outline' | 'icon';
@@ -14,19 +14,11 @@ const ReservationButton: React.FC<ReservationButtonProps> = ({
   size = 'default',
   className = ''
 }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  const openModal = () => {
-    // Play click sound when opening modal
+  const handleClick = () => {
+    // Play click sound when clicking
     const clickSound = new Audio('/sounds/button-click.mp3');
     clickSound.volume = 0.2;
     clickSound.play().catch(err => console.log('Audio play failed:', err));
-    
-    setIsModalOpen(true);
-  };
-  
-  const closeModal = () => {
-    setIsModalOpen(false);
   };
   
   // Button styles based on variant and size
@@ -58,22 +50,19 @@ const ReservationButton: React.FC<ReservationButtonProps> = ({
   };
   
   return (
-    <>
-      <motion.button
-        whileHover={{ scale: 1.03 }}
-        whileTap={{ scale: 0.97 }}
-        onClick={openModal}
+    <motion.div
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.97 }}
+    >
+      <Link
+        to="/reservations"
+        onClick={handleClick}
         className={getButtonStyles()}
       >
         <Calendar size={variant === 'icon' ? 20 : 16} />
         {variant !== 'icon' && <span>Reserve a Table</span>}
-      </motion.button>
-      
-      <LuxuryReservationModal 
-        isOpen={isModalOpen}
-        onClose={closeModal}
-      />
-    </>
+      </Link>
+    </motion.div>
   );
 };
 

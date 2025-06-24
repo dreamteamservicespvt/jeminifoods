@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
+import React, { useState, useEffect, useRef } from 'react';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { 
-  Search, Star, Heart, Clock, Leaf, Flame, Zap, 
-  Award, Gift, X, Plus, Grid3X3, List, 
-  SlidersHorizontal, ChefHat, Coffee, Utensils
+  Search, Filter, Star, Heart, Clock, Leaf, Flame, Zap, Users, 
+  Award, Gift, ShoppingBag, ArrowRight, X, Plus, Grid3X3, List, 
+  SlidersHorizontal, ChefHat, Coffee, Utensils, Eye, TrendingUp,
+  MapPin, Timer, Sparkles, ThumbsUp, Camera, Play
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,47 +40,53 @@ interface MenuItem {
   reviewCount?: number;
 }
 
-// Enhanced Category Configuration
+// Enhanced Category Configuration with better icons and descriptions
 const categoryConfig = {
   all: { 
     title: 'All Dishes', 
     icon: Utensils, 
     emoji: '🍽️', 
-    description: 'Explore our complete culinary collection'
+    description: 'Explore our complete culinary collection',
+    color: 'from-gray-500 to-gray-600'
   },
   starters: { 
     title: 'Appetizers', 
     icon: ChefHat, 
     emoji: '🥗', 
-    description: 'Perfect beginnings to your culinary journey'
+    description: 'Perfect beginnings to your culinary journey',
+    color: 'from-emerald-500 to-teal-600'
   },
   'main course': { 
     title: 'Main Courses', 
     icon: Utensils, 
     emoji: '🍛', 
-    description: 'Hearty dishes crafted to perfection'
+    description: 'Hearty dishes crafted to perfection',
+    color: 'from-amber-500 to-orange-600'
   },
   desserts: { 
     title: 'Sweet Endings', 
     icon: Gift, 
     emoji: '🍰', 
-    description: 'Indulgent treats to satisfy your sweet tooth'
+    description: 'Indulgent treats to satisfy your sweet tooth',
+    color: 'from-pink-500 to-rose-600'
   },
   beverages: { 
     title: 'Beverages', 
     icon: Coffee, 
     emoji: '🥤', 
-    description: 'Refreshing drinks to complement your meal'
+    description: 'Refreshing drinks to complement your meal',
+    color: 'from-blue-500 to-cyan-600'
   },
   "chef's specials": { 
     title: "Chef's Specials", 
     icon: Award, 
     emoji: '⭐', 
-    description: 'Signature dishes from our master chefs'
+    description: 'Signature dishes from our master chefs',
+    color: 'from-purple-500 to-indigo-600'
   },
 };
 
-// Dietary Tags Configuration
+// Enhanced Dietary Tags with better styling
 const dietaryTags = {
   vegetarian: {
     icon: Leaf,
@@ -132,6 +139,7 @@ const Menu = () => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const isTablet = useMediaQuery("(min-width: 769px) and (max-width: 1024px)");
   const { isFavorite, addFavorite, removeFavorite, getFavoriteId } = useFavorites();
   
   const { scrollY } = useScroll();
@@ -165,12 +173,15 @@ const Menu = () => {
       if (item.dietary) {
         item.dietary.forEach(diet => availableFilters.add(diet));
       }
+      if (item.featured) availableFilters.add('popular');
+      if (item.specialOffer) availableFilters.add('special');
+      if (item.preparationTime && item.preparationTime <= 15) availableFilters.add('quick');
     });
     
     return Array.from(availableFilters).filter(filter => dietaryTags[filter]);
   };
 
-  // Filter and search logic
+  // Enhanced filter and search logic
   const filteredItems = menuItems.filter(item => {
     // Category filter
     if (selectedCategory !== 'all') {
@@ -178,7 +189,7 @@ const Menu = () => {
       if (selectedCategory !== "chef's specials" && item.category.toLowerCase() !== selectedCategory.toLowerCase()) return false;
     }
 
-    // Search filter
+    // Search filter (enhanced to include ingredients and dietary)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const searchableText = [
@@ -195,14 +206,23 @@ const Menu = () => {
     // Dietary filters
     if (selectedDietaryFilters.length > 0) {
       return selectedDietaryFilters.every(filter => {
-        return item.dietary?.includes(filter);
+        switch (filter) {
+          case 'popular':
+            return item.featured;
+          case 'special':
+            return item.specialOffer;
+          case 'quick':
+            return item.preparationTime && item.preparationTime <= 15;
+          default:
+            return item.dietary?.includes(filter);
+        }
       });
     }
 
     return true;
   });
 
-  // Sort logic
+  // Enhanced sort logic
   const sortedItems = [...filteredItems].sort((a, b) => {
     switch (sortBy) {
       case 'price':
@@ -267,19 +287,26 @@ const Menu = () => {
 
   const activeFiltersCount = selectedDietaryFilters.length + (selectedCategory !== 'all' ? 1 : 0);
 
-  // Loading State
+  // Enhanced Loading State
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="container mx-auto px-4 py-6">
           <div className="animate-pulse space-y-6">
+            {/* Header Skeleton */}
             <div className="h-20 bg-black/20 rounded-3xl backdrop-blur-sm"></div>
+            
+            {/* Search Skeleton */}
             <div className="h-16 bg-black/20 rounded-2xl backdrop-blur-sm"></div>
+            
+            {/* Category Pills Skeleton */}
             <div className="flex gap-3 overflow-hidden">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="h-12 w-32 bg-black/20 rounded-full flex-shrink-0 backdrop-blur-sm"></div>
               ))}
             </div>
+            
+            {/* Menu Items Grid Skeleton */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {[...Array(8)].map((_, i) => (
                 <div key={i} className="bg-black/20 rounded-3xl backdrop-blur-sm overflow-hidden">
@@ -302,13 +329,14 @@ const Menu = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-cream pt-20">
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-cream">
+      {/* Enhanced Header with Motion Effects */}
       <motion.div 
-        className="sticky top-20 z-40 bg-black/80 backdrop-blur-xl border-b border-cream/10"
+        className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-cream/10"
         style={{ opacity: headerOpacity }}
       >
         <div className="container mx-auto px-4 py-6">
+          {/* Header Top */}
           <div className="flex items-center justify-between mb-6">
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
@@ -366,7 +394,7 @@ const Menu = () => {
             </div>
           </div>
 
-          {/* Search Bar */}
+          {/* Enhanced Search Bar */}
           <motion.div 
             className="relative mb-6"
             initial={{ opacity: 0, y: 20 }}
@@ -402,7 +430,7 @@ const Menu = () => {
         </div>
       </motion.div>
 
-      {/* Category Pills */}
+      {/* Enhanced Category Pills */}
       <div className="bg-black/40 backdrop-blur-sm border-b border-cream/10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
@@ -448,7 +476,7 @@ const Menu = () => {
         </div>
       </div>
 
-      {/* Filters Section */}
+      {/* Enhanced Filters Section */}
       <div className="bg-black/20 backdrop-blur-sm border-b border-cream/10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
@@ -544,7 +572,7 @@ const Menu = () => {
         </div>
       </div>
 
-      {/* Menu Items */}
+      {/* Enhanced Menu Items */}
       <div className="container mx-auto px-4 py-8">
         {sortedItems.length === 0 ? (
           <motion.div 
@@ -601,7 +629,7 @@ const Menu = () => {
                     viewMode === 'list' && "flex flex-row max-h-40"
                   )}
                 >
-                  {/* Image Container */}
+                  {/* Enhanced Image Container */}
                   <div className={cn(
                     "relative overflow-hidden",
                     viewMode === 'grid' ? "h-56" : "w-40 h-40 flex-shrink-0"
@@ -629,7 +657,7 @@ const Menu = () => {
                       </div>
                     )}
                     
-                    {/* Favorite Button */}
+                    {/* Enhanced Favorite Button */}
                     <motion.button
                       onClick={(e) => handleToggleFavorite(item, e)}
                       whileHover={{ scale: 1.1 }}
@@ -647,7 +675,7 @@ const Menu = () => {
                       )} />
                     </motion.button>
 
-                    {/* Badges */}
+                    {/* Enhanced Badges */}
                     <div className="absolute top-4 left-4 flex flex-col gap-2">
                       {item.specialOffer && (
                         <motion.div
@@ -690,7 +718,7 @@ const Menu = () => {
                     )}
                   </div>
 
-                  {/* Content */}
+                  {/* Enhanced Content */}
                   <div className={cn(
                     "p-6 flex flex-col",
                     viewMode === 'list' ? "flex-1 justify-between py-4" : "space-y-4"
@@ -718,7 +746,7 @@ const Menu = () => {
                         {item.description}
                       </p>
 
-                      {/* Spice Level */}
+                      {/* Spice Level Indicator */}
                       {item.spiceLevel && item.spiceLevel > 0 && viewMode === 'grid' && (
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-cream/60">Spice:</span>
@@ -739,7 +767,7 @@ const Menu = () => {
                       )}
                     </div>
 
-                    {/* Dietary Tags */}
+                    {/* Enhanced Dietary Tags */}
                     {item.dietary && item.dietary.length > 0 && viewMode === 'grid' && (
                       <div className="flex flex-wrap gap-2">
                         {item.dietary.slice(0, 3).map((diet) => {
@@ -768,7 +796,7 @@ const Menu = () => {
                       </div>
                     )}
 
-                    {/* Price and Add Button */}
+                    {/* Enhanced Price and Add Button */}
                     <div className="flex items-center justify-between mt-auto pt-2">
                       <div className="space-y-1">
                         <div className={cn(

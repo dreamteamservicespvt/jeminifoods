@@ -1,0 +1,198 @@
+/* Mobile Menu Enhancements */
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Mobile List View Animations */
+.mobile-list-item {
+  transform: translateX(-30px);
+  opacity: 0;
+  animation: slideInLeft 0.4s ease-out forwards;
+}
+
+@keyframes slideInLeft {
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Enhanced Filter Animations */
+.filter-slide-in {
+  animation: filterSlideIn 0.3s ease-out;
+}
+
+@keyframes filterSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile Search Bar Focus Effects */
+.mobile-search-focused {
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.3), 0 8px 25px rgba(217, 119, 6, 0.1);
+  transform: scale(1.01);
+}
+
+/* Mobile Card Hover Effects */
+.mobile-card-hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(217, 119, 6, 0.15);
+}
+
+/* Filter Toggle Animation */
+.filter-toggle-open {
+  animation: filterToggleOpen 0.3s ease-out;
+}
+
+@keyframes filterToggleOpen {
+  from {
+    max-height: 0;
+    opacity: 0;
+  }
+  to {
+    max-height: 400px;
+    opacity: 1;
+  }
+}
+
+/* Mobile Testimonials Enhancements */
+.testimonial-card-mobile {
+  scroll-snap-align: center;
+  scroll-behavior: smooth;
+}
+
+/* Contact Info Cards Mobile */
+.contact-card-mobile {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.contact-card-mobile:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 32px rgba(217, 119, 6, 0.2);
+}
+
+/* Mobile View Mode Toggle */
+.view-mode-toggle {
+  transition: all 0.2s ease;
+}
+
+.view-mode-toggle.active {
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: #000;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+}
+
+/* Mobile Dietary Chips */
+.dietary-chip-mobile {
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.dietary-chip-mobile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2);
+}
+
+/* Mobile Results Summary */
+.results-summary-mobile {
+  animation: resultsSlideIn 0.4s ease-out;
+}
+
+@keyframes resultsSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Loading Animations for Mobile */
+.mobile-loading-skeleton {
+  background: linear-gradient(90deg, rgba(217, 119, 6, 0.1) 25%, rgba(217, 119, 6, 0.2) 50%, rgba(217, 119, 6, 0.1) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Mobile Touch Feedback */
+.mobile-touch-feedback {
+  transition: transform 0.1s ease;
+}
+
+.mobile-touch-feedback:active {
+  transform: scale(0.98);
+}
+
+/* Responsive Grid Adjustments */
+@media (max-width: 640px) {
+  .mobile-grid-adjust {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  
+  .mobile-list-adjust {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
+/* Enhanced Mobile Animations */
+@keyframes mobileSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mobile-slide-up {
+  animation: mobileSlideUp 0.4s ease-out;
+}
+
+/* Contact Cards Specific Mobile Styles */
+.contact-info-mobile .contact-card {
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.contact-info-mobile .contact-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(217, 119, 6, 0.15);
+}
+
+/* Menu Header Mobile Specific */
+.mobile-menu-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}

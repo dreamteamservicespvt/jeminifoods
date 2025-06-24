@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarCheck, X, Phone, Clock } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useMediaQuery } from '@/hooks/use-media-query';
-import LuxuryReservationModal from './reservation/LuxuryReservationModal';
 
 const MobileReservationFAB = () => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Don't render on desktop or on the reservations page
   if (!isMobile || location.pathname === '/reservations') return null;
@@ -18,9 +17,9 @@ const MobileReservationFAB = () => {
     setIsExpanded(!isExpanded);
   };
 
-  // Handle opening the reservation modal
-  const openReservationModal = () => {
-    setIsModalOpen(true);
+  // Handle opening the reservation page
+  const openReservations = () => {
+    navigate('/reservations');
     setIsExpanded(false);
   };
 
@@ -38,7 +37,7 @@ const MobileReservationFAB = () => {
       icon: CalendarCheck, 
       label: 'Reserve Table', 
       color: 'bg-amber-600',
-      action: openReservationModal
+      action: openReservations
     },
     { 
       icon: Clock, 
@@ -47,7 +46,7 @@ const MobileReservationFAB = () => {
       path: '/preorders' 
     },
     { 
-      icon: Phone, 
+      icon: Phone,
       label: 'Call Us', 
       color: 'bg-amber-800',
       path: 'tel:+15551234567',
@@ -131,16 +130,9 @@ const MobileReservationFAB = () => {
             animate={{ rotate: isExpanded ? 45 : 0 }}
             transition={{ duration: 0.3 }}
           >
-            {isExpanded ? <X size={24} /> : <CalendarCheck size={24} />}
-          </motion.div>
+            {isExpanded ? <X size={24} /> : <CalendarCheck size={24} />}          </motion.div>
         </motion.button>
       </div>
-
-      {/* Reservation Modal */}
-      <LuxuryReservationModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-      />
     </>
   );
 };

@@ -302,10 +302,10 @@ const Menu = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-cream pt-20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-cream">
       {/* Header */}
       <motion.div 
-        className="sticky top-20 z-40 bg-black/80 backdrop-blur-xl border-b border-cream/10"
+        className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-cream/10"
         style={{ opacity: headerOpacity }}
       >
         <div className="container mx-auto px-4 py-6">
