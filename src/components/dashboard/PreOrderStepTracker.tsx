@@ -2,11 +2,12 @@ import React from 'react';
 import { OrderTracker, type OrderStatus } from '@/components/ui/OrderTracker';
 
 interface PreOrderStepTrackerProps {
-  status: 'booked' | 'taken' | 'making' | 'ready' | 'completed';
+  status: 'pending' | 'booked' | 'taken' | 'making' | 'ready' | 'completed';
   className?: string;
   orderId?: string;
   chefName?: string;
   timestamps?: {
+    pending?: string;
     booked?: string;
     taken?: string;
     making?: string;
@@ -26,7 +27,7 @@ export const PreOrderStepTracker: React.FC<PreOrderStepTrackerProps> = ({
   onStatusChange,
 }) => {
   // Map the status to ensure compatibility
-  const mappedStatus: OrderStatus = status === 'completed' ? 'ready' : status;
+  const mappedStatus: OrderStatus = status === 'completed' ? 'ready' : (status === 'pending' ? 'booked' : status);
 
   return (
     <OrderTracker

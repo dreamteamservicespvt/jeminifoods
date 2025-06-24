@@ -471,11 +471,10 @@ const Reservations = () => {  // Form state
         </div>
       </div>
     );
-  };
-
-  return (
-    <div className="min-h-screen bg-charcoal pt-20 overflow-x-hidden">
-      <AmbianceImages />
+  };  return (
+    <div className="min-h-screen bg-charcoal">
+      <div className="overflow-x-hidden">
+        <AmbianceImages />
       
       {/* Background ambient audio */}
       <audio ref={audioRef} src="/ambient-restaurant.mp3" loop />
@@ -1222,8 +1221,7 @@ const Reservations = () => {  // Form state
                           ) : (
                             <>
                               <span>Confirm Reservation</span>
-                              <CheckCircle size={18} />
-                            </>
+                              <CheckCircle size={18} />                            </>
                           )}
                         </motion.button>
                       )}
@@ -1234,6 +1232,7 @@ const Reservations = () => {  // Form state
             </motion.div>
           )}
         </motion.div>
+      </div>
       </div>
     </div>
   );

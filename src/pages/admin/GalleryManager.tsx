@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface GalleryItem {
   id: string;
@@ -114,8 +115,40 @@ const GalleryManager: React.FC = () => {
       );
     }
     
-    setFilteredItems(filtered);
-  }, [galleryItems, categoryFilter, searchQuery]);
+    setFilteredItems(filtered);  }, [galleryItems, categoryFilter, searchQuery]);
+
+  // Keyboard shortcuts for selection
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle shortcuts when not in input fields
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Ctrl/Cmd + A to select all
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+        if (filteredItems.length > 0) {
+          selectAllItems();
+        }
+      }
+
+      // Delete key to delete selected items
+      if (e.key === 'Delete' && selectedItems.length > 0) {
+        e.preventDefault();
+        handleBatchDelete();
+      }
+
+      // Escape to clear selection
+      if (e.key === 'Escape' && selectedItems.length > 0) {
+        e.preventDefault();
+        setSelectedItems([]);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [filteredItems, selectedItems]);
 
   // Reset form fields
   const resetForm = () => {
@@ -277,20 +310,37 @@ const GalleryManager: React.FC = () => {
       }
     }
   };
-
   // Batch delete selected items
   const handleBatchDelete = async () => {
     if (selectedItems.length === 0) return;
     
-    if (window.confirm(`Are you sure you want to delete ${selectedItems.length} items? This action cannot be undone.`)) {
+    const itemNames = selectedItems.map(id => {
+      const item = filteredItems.find(item => item.id === id);
+      return item?.title || 'Untitled';
+    }).slice(0, 3); // Show up to 3 names
+    
+    const moreCount = selectedItems.length - itemNames.length;
+    const displayText = itemNames.join(', ') + (moreCount > 0 ? ` and ${moreCount} more` : '');
+    
+    const confirmMessage = selectedItems.length === 1 
+      ? `Are you sure you want to delete "${displayText}"?`
+      : `Are you sure you want to delete ${selectedItems.length} items?\n\nItems to delete: ${displayText}\n\nThis action cannot be undone.`;
+    
+    if (window.confirm(confirmMessage)) {
       try {
+        // Show loading state
+        const deletingToast = toast({
+          title: "Deleting items...",
+          description: `Removing ${selectedItems.length} ${selectedItems.length === 1 ? 'item' : 'items'} from gallery.`,
+        });
+
         for (const id of selectedItems) {
           await deleteDoc(doc(db, 'gallery', id));
         }
         
         toast({
-          title: "Items deleted",
-          description: `${selectedItems.length} items have been removed.`,
+          title: "Items deleted successfully",
+          description: `${selectedItems.length} ${selectedItems.length === 1 ? 'item has' : 'items have'} been removed from the gallery.`,
         });
         
         setSelectedItems([]);
@@ -298,7 +348,7 @@ const GalleryManager: React.FC = () => {
         console.error('Batch delete failed:', error);
         toast({
           title: "Delete failed",
-          description: "There was an error deleting the items.",
+          description: "There was an error deleting some items. Please try again.",
           variant: "destructive"
         });
       }
@@ -346,18 +396,31 @@ const GalleryManager: React.FC = () => {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <h2 className="text-3xl font-bold text-amber-400">Gallery Management</h2>
-        
-        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
           {selectedItems.length > 0 && (
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={handleBatchDelete}
-              className="gap-1"
-            >
-              <Trash2 size={16} />
-              Delete ({selectedItems.length})
-            </Button>
+            <>
+              <span className="text-sm text-amber-400 hidden sm:inline">
+                {selectedItems.length} of {filteredItems.length} selected
+              </span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setSelectedItems([])}
+                className="gap-1 border-amber-600/30 text-amber-400 hover:bg-amber-600/10"
+              >
+                <X size={14} />
+                Clear Selection
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={handleBatchDelete}
+                className="gap-1"
+              >
+                <Trash2 size={16} />
+                Delete ({selectedItems.length})
+              </Button>
+            </>
           )}
           
           <Button 
@@ -463,8 +526,7 @@ const GalleryManager: React.FC = () => {
                 <List size={18} />
               </Button>
             </div>
-            
-            {(searchQuery || categoryFilter !== 'all') && (
+              {(searchQuery || categoryFilter !== 'all') && (
               <Button 
                 variant="ghost" 
                 size="sm"
@@ -477,6 +539,78 @@ const GalleryManager: React.FC = () => {
                 <FilterX size={16} className="mr-2" />
                 Clear Filters
               </Button>
+            )}            {/* Selection Controls */}
+            {filteredItems.length > 0 && (
+              <div className="flex items-center gap-2 pl-4 border-l border-amber-600/20">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={selectAllItems}
+                  className="border-amber-600/30 text-amber-400 hover:bg-amber-600/10"
+                >
+                  {selectedItems.length === filteredItems.length && filteredItems.length > 0 ? (
+                    <>
+                      <Check size={14} className="mr-2" />
+                      Deselect All
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={14} className="mr-2" />
+                      Select All
+                    </>
+                  )}
+                </Button>
+
+                {/* Quick Select Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-amber-600/30 text-amber-400 hover:bg-amber-600/10"
+                    >
+                      <SlidersHorizontal size={14} className="mr-2" />
+                      Quick Select
+                      <ChevronDown size={14} className="ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-charcoal border-amber-600/30">
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        const imageIds = filteredItems.filter(item => item.type === 'image').map(item => item.id);
+                        setSelectedItems(imageIds);
+                      }}
+                      className="text-cream hover:text-amber-400"
+                    >
+                      Select All Images ({filteredItems.filter(item => item.type === 'image').length})
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        const videoIds = filteredItems.filter(item => item.type === 'video').map(item => item.id);
+                        setSelectedItems(videoIds);
+                      }}
+                      className="text-cream hover:text-amber-400"
+                    >
+                      Select All Videos ({filteredItems.filter(item => item.type === 'video').length})
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        const featuredIds = filteredItems.filter(item => item.featured).map(item => item.id);
+                        setSelectedItems(featuredIds);
+                      }}
+                      className="text-cream hover:text-amber-400"
+                    >
+                      Select Featured Items ({filteredItems.filter(item => item.featured).length})
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                {selectedItems.length > 0 && selectedItems.length < filteredItems.length && (
+                  <span className="text-xs text-amber-400/70">
+                    {selectedItems.length} selected
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -643,9 +777,69 @@ const GalleryManager: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {/* Gallery Grid/List View */}
+        {/* Gallery Grid/List View */}
       <div className={`bg-black/30 border border-amber-600/20 rounded-lg p-4 ${isLoading ? 'min-h-[400px]' : ''}`}>
+        {/* Selection Instructions */}
+        {filteredItems.length > 0 && selectedItems.length === 0 && (
+          <div className="mb-4 p-3 bg-amber-600/10 border border-amber-600/20 rounded-lg">
+            <div className="flex items-center gap-2 text-amber-400 text-sm">
+              <Info size={16} />
+              <span>
+                <strong>Pro tip:</strong> Click the <Plus size={14} className="inline mx-1" /> button to select items for bulk operations. 
+                Use <kbd className="px-1 py-0.5 bg-black/40 rounded text-xs">Ctrl+A</kbd> to select all, 
+                <kbd className="px-1 py-0.5 bg-black/40 rounded text-xs">Delete</kbd> to remove selected items, 
+                or <kbd className="px-1 py-0.5 bg-black/40 rounded text-xs">Esc</kbd> to clear selection.
+              </span>
+            </div>
+          </div>        )}        {/* Selection Summary */}
+        {selectedItems.length > 0 && (
+          <div className="mb-4 p-3 bg-blue-600/10 border border-blue-600/20 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4 text-blue-400 text-sm">
+                <div className="flex items-center gap-2">
+                  <Check size={16} />
+                  <span>
+                    <strong>{selectedItems.length}</strong> {selectedItems.length === 1 ? 'item' : 'items'} selected
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-blue-300">
+                  <span>
+                    {selectedItems.filter(id => {
+                      const item = filteredItems.find(item => item.id === id);
+                      return item?.type === 'image';
+                    }).length} images
+                  </span>
+                  <span>
+                    {selectedItems.filter(id => {
+                      const item = filteredItems.find(item => item.id === id);
+                      return item?.type === 'video';
+                    }).length} videos
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedItems([])}
+                  className="text-blue-400 hover:bg-blue-600/10 text-xs"
+                >
+                  Clear Selection
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBatchDelete}
+                  className="text-xs"
+                >
+                  <Trash2 size={14} className="mr-1" />
+                  Delete Selected
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {Array(10).fill(0).map((_, index) => (
@@ -684,16 +878,23 @@ const GalleryManager: React.FC = () => {
                     ? 'border-amber-400 ring-2 ring-amber-400/30' 
                     : 'border-amber-600/20 hover:border-amber-600/40'
                 }`}
-              >
-                <div className="absolute top-2 right-2 z-10 flex gap-1">
+              >                <div className="absolute top-2 right-2 z-10 flex gap-1">
                   <Button
                     variant="outline"
                     size="icon"
-                    className="w-8 h-8 p-0 bg-black/60 border-none text-cream hover:text-amber-400 hover:bg-black/80"
-                    onClick={() => toggleItemSelection(item.id)}
+                    className={cn(
+                      "w-8 h-8 p-0 border-none transition-all",
+                      selectedItems.includes(item.id)
+                        ? "bg-amber-600 text-black hover:bg-amber-700"
+                        : "bg-black/60 text-cream hover:text-amber-400 hover:bg-black/80"
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleItemSelection(item.id);
+                    }}
                   >
                     {selectedItems.includes(item.id) ? (
-                      <Check size={16} className="text-amber-400" />
+                      <Check size={16} />
                     ) : (
                       <Plus size={16} />
                     )}

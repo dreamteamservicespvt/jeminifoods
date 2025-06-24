@@ -17,9 +17,9 @@ interface PreOrder {
   id: string;
   items: any[];
   total: number;
-  status: 'booked' | 'taken' | 'making' | 'ready' | 'completed';
-  pickupDate: string;
-  pickupTime: string;
+  status: 'pending' | 'booked' | 'taken' | 'making' | 'ready' | 'completed';
+  date: string;
+  time: string;
   createdAt: any;
   assignedChef?: string;
   estimatedReadyTime?: string;
@@ -251,7 +251,7 @@ const ChefDashboard = () => {
                           <div className="flex items-center">
                             <Clock className="w-4 h-4 mr-2 text-amber-400" />
                             <span className="text-sm text-cream">
-                              Pickup: {order.pickupDate} at {order.pickupTime}
+                              Pickup: {order.date} at {order.time}
                             </span>
                           </div>
                           {order.estimatedReadyTime && (

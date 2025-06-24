@@ -78,12 +78,12 @@ Hi {{userName}}! Your order #{{orderId}} is now *{{status}}*.
 
 {{statusMessage}}
 
-📅 Pickup: {{pickupDate}} at {{pickupTime}}
+📅 Pickup: {{date}} at {{time}}
 
 Track your order: {{trackingUrl}}
 
 Thank you! 🙏`,
-    requiredParams: ['userName', 'orderId', 'status', 'statusMessage', 'pickupDate', 'pickupTime', 'trackingUrl']
+    requiredParams: ['userName', 'orderId', 'status', 'statusMessage', 'date', 'time', 'trackingUrl']
   },
   {
     type: 'order_ready',
@@ -391,8 +391,8 @@ export const sendOrderStatusUpdate = async (
     orderId: string;
     status: string;
     statusMessage: string;
-    pickupDate: string;
-    pickupTime: string;
+    date: string;
+    time: string;
     trackingUrl: string;
   }
 ) => {

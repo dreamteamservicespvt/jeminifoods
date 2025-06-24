@@ -104,7 +104,6 @@ const PreOrders = () => {
   // Category and dietary filters
   const categories = ["all", "appetizers", "mains", "desserts", "beverages"];
   const dietaryOptions = ["Vegan", "Vegetarian", "Gluten-Free", "Chef's Special"];
-
   // Function to get unique order ID
   const generateOrderId = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -114,6 +113,28 @@ const PreOrders = () => {
     }
     return id;
   };
+
+  // Load transferred cart data from Menu page
+  useEffect(() => {
+    const transferredCart = localStorage.getItem('menuCartTransfer');
+    if (transferredCart) {
+      try {
+        const cartData = JSON.parse(transferredCart);
+        if (Array.isArray(cartData) && cartData.length > 0) {
+          setCart(cartData);
+          setShowCart(true); // Show cart immediately
+          localStorage.removeItem('menuCartTransfer'); // Clean up
+          toast({
+            title: "Cart loaded",
+            description: `${cartData.length} items transferred from menu`,
+          });
+        }
+      } catch (error) {
+        console.error('Error loading transferred cart:', error);
+        localStorage.removeItem('menuCartTransfer'); // Clean up on error
+      }
+    }
+  }, []);
 
   // Fetch menu items
   useEffect(() => {
@@ -384,8 +405,7 @@ const PreOrders = () => {
           paymentScreenshotUrl = "upload_failed_but_order_processed";
         }
       }
-      
-      const orderData = {
+        const orderData = {
         name: checkoutForm.name || '',
         email: checkoutForm.email || '',
         phone: checkoutForm.phone || '',
@@ -405,7 +425,8 @@ const PreOrders = () => {
         paymentScreenshotUrl,
         paymentMethod: selectedPaymentMethod,
         paymentConfirmed: true,
-        imageProvider: "cloudinary" // Add this to track where images are stored
+        imageProvider: "cloudinary", // Add this to track where images are stored
+        userId: user?.uid || null // Add userId for dashboard sync
       };
         console.log("Submitting order data to Firebase:", orderData);
         // Submit to Firebase

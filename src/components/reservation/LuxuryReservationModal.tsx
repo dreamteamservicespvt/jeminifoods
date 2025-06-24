@@ -339,8 +339,7 @@ const LuxuryReservationModal: React.FC<LuxuryReservationModalProps> = ({ isOpen,
     
     setIsSubmitting(true);
     
-    try {
-      // Add to Firestore
+    try {      // Add to Firestore
       const docRef = await addDoc(collection(db, 'reservations'), {
         name: formData.name?.trim(),
         email: formData.email?.trim(),
@@ -352,7 +351,8 @@ const LuxuryReservationModal: React.FC<LuxuryReservationModalProps> = ({ isOpen,
         seatingPreference: formData.seatingPreference,
         occasion: formData.occasion || 'None',
         status: 'pending',
-        createdAt: Timestamp.now()
+        createdAt: Timestamp.now(),
+        userId: user?.uid || null // Add userId for dashboard sync
       });
       
       setReservationId(docRef.id);

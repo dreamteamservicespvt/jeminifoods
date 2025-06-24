@@ -509,15 +509,14 @@ const UserDashboard = () => {
                     </div>
                   ) : (
                     <>
-                      {preOrders.map((order) => (
-                        <PreOrderItem 
+                      {preOrders.map((order) => (                        <PreOrderItem 
                           key={order.id}
                           id={order.id}
                           items={order.items}
                           total={order.total}
                           status={order.status}
-                          pickupDate={order.pickupDate}
-                          pickupTime={order.pickupTime}
+                          date={order.date}
+                          time={order.time}
                           createdAt={order.createdAt}
                           assignedChef={order.assignedChef}
                           estimatedReadyTime={order.estimatedReadyTime}

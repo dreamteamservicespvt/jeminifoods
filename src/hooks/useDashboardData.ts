@@ -19,12 +19,19 @@ export interface PreOrder {
   id: string;
   items: any[];
   total: number;
-  status: 'booked' | 'taken' | 'making' | 'ready' | 'completed';
-  pickupDate: string;
-  pickupTime: string;
+  status: 'pending' | 'booked' | 'taken' | 'making' | 'ready' | 'completed';
+  date: string; // Changed from pickupDate to match actual data
+  time: string; // Changed from pickupTime to match actual data
   createdAt: any;
   assignedChef?: string;
   estimatedReadyTime?: string;
+  orderId?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  specialRequests?: string;
+  paymentStatus?: 'pending' | 'completed';
+  estimatedPickupTime?: string;
 }
 
 export interface Favorite {

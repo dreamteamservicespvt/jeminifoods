@@ -16,9 +16,9 @@ interface PreOrderItemProps {
   id: string;
   items: any[];
   total: number;
-  status: 'booked' | 'taken' | 'making' | 'ready' | 'completed';
-  pickupDate: string;
-  pickupTime: string;
+  status: 'pending' | 'booked' | 'taken' | 'making' | 'ready' | 'completed';
+  date: string;
+  time: string;
   createdAt: any;
   assignedChef?: string;
   estimatedReadyTime?: string;
@@ -31,20 +31,21 @@ export const PreOrderItem: React.FC<PreOrderItemProps> = ({
   items,
   total,
   status,
-  pickupDate,
-  pickupTime,
+  date,
+  time,
   createdAt,
   assignedChef,
   estimatedReadyTime,
   onRefresh,
   isRefreshing
 }) => {
-  const formattedDate = pickupDate ? 
-    format(new Date(pickupDate), 'MMMM d, yyyy') : 
+  const formattedDate = date ? 
+    format(new Date(date), 'MMMM d, yyyy') : 
     'Date not specified';
   
   // Enhanced status colors with glow
   const statusColors = {
+    pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500",
     booked: "bg-blue-500/20 text-blue-400 border-blue-500",
     taken: "bg-purple-500/20 text-purple-400 border-purple-500", 
     making: "bg-amber-500/20 text-amber-400 border-amber-500",
@@ -67,7 +68,13 @@ export const PreOrderItem: React.FC<PreOrderItemProps> = ({
       whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
     >
       <Card className="w-full mb-5 overflow-hidden bg-gradient-to-br from-black/60 to-black/40 border-amber-600/20 shadow-lg">
-        <div className={`h-1 w-full ${status === 'ready' ? 'bg-green-500' : status === 'making' ? 'bg-amber-500' : status === 'taken' ? 'bg-purple-500' : 'bg-blue-500'}`} />
+        <div className={`h-1 w-full ${
+          status === 'ready' ? 'bg-green-500' : 
+          status === 'making' ? 'bg-amber-500' : 
+          status === 'taken' ? 'bg-purple-500' : 
+          status === 'booked' ? 'bg-blue-500' : 
+          'bg-yellow-500' // pending
+        }`} />
         
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start">
@@ -117,7 +124,7 @@ export const PreOrderItem: React.FC<PreOrderItemProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="flex items-center">
                 <CalendarClock className="w-4 h-4 mr-2 text-amber-400" />
-                <span className="text-sm text-cream">Pickup: {formattedDate} at {pickupTime}</span>
+                <span className="text-sm text-cream">Pickup: {formattedDate} at {time}</span>
               </div>
               
               {assignedChef && (
