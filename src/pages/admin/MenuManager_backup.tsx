@@ -6,7 +6,8 @@ import { uploadToCloudinary } from '../../lib/cloudinary';
 import { useForm } from 'react-hook-form';
 import { 
   Plus, Edit, Trash2, Upload, Image, AlertCircle, Search, 
-  Filter, Utensils, Star, X, EyeIcon, Camera
+  Filter, Tag, Utensils, Star, Leaf, X, Check, EyeIcon, 
+  Flame, ShieldAlert, SlidersHorizontal, Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +22,8 @@ interface MenuItem {
   price: number;
   category: string;
   image?: string;
+  dietary?: string[];
+  allergens?: string[];
   featured?: boolean;
   ingredients?: string[];
   visibility?: boolean;
@@ -33,9 +36,15 @@ interface MenuFormData {
   category: string;
   image?: string;
   ingredients?: string;
+  dietary?: string[];
+  allergens?: string[];
   featured?: boolean;
   visibility?: boolean;
 }
+
+// Dietary and allergen options
+const DIETARY_OPTIONS = ["Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Keto", "Low-Carb"];
+const ALLERGEN_OPTIONS = ["Nuts", "Dairy", "Eggs", "Soy", "Wheat", "Shellfish", "Fish", "Peanuts"];
 
 const MenuManager = () => {
   // Original state variables
@@ -53,41 +62,16 @@ const MenuManager = () => {
   const [filteredItems, setFilteredItems] = useState<MenuItem[]>([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showImageModal, setShowImageModal] = useState<string | null>(null);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
+  const [selectedAllergens, setSelectedAllergens] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get form values
   const watchFeatured = watch("featured", false);
   const watchVisibility = watch("visibility", true);
-  const watchCategory = watch("category", "");
   
-  // All categories from existing menu items only (no hardcoded categories)
-  const existingCategories = [...new Set(menuItems.map(item => item.category))];
-  const allCategories = ['all', ...existingCategories];
-  // Include the currently selected category if it's new (not yet saved to database)
-  const availableCategories = [...new Set([...existingCategories, ...(watchCategory && !existingCategories.includes(watchCategory) ? [watchCategory] : [])])];
-
-  // Handle new category creation
-  const handleAddNewCategory = () => {
-    if (newCategoryName.trim() && !existingCategories.includes(newCategoryName.trim().toLowerCase())) {
-      const newCategory = newCategoryName.trim().toLowerCase();
-      // Immediately set the new category as selected
-      setValue('category', newCategory);
-      setNewCategoryName('');
-      setShowNewCategoryInput(false);
-      toast({
-        title: "Success",
-        description: `New category "${newCategory}" selected! It will be created when you save the item.`
-      });
-    } else if (existingCategories.includes(newCategoryName.trim().toLowerCase())) {
-      toast({
-        title: "Category exists",
-        description: "This category already exists. Please choose a different name.",
-        variant: "destructive"
-      });
-    }
-  };
+  // All categories from items
+  const allCategories = [...new Set(['all', ...(menuItems.map(item => item.category))])];
 
   // Fetch menu items from Firestore
   useEffect(() => {
@@ -150,6 +134,24 @@ const MenuManager = () => {
     }
   };
 
+  // Toggle dietary tag selection
+  const toggleDietaryTag = (tag: string) => {
+    setSelectedDietary(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag) 
+        : [...prev, tag]
+    );
+  };
+
+  // Toggle allergen tag selection
+  const toggleAllergenTag = (tag: string) => {
+    setSelectedAllergens(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag) 
+        : [...prev, tag]
+    );
+  };
+
   // Handle form submission with enhanced data
   const onSubmit = async (data: MenuFormData) => {
     if (!user) {
@@ -196,6 +198,8 @@ const MenuManager = () => {
         price: parseFloat(data.price),
         category: data.category,
         image: imageUrl,
+        dietary: selectedDietary,
+        allergens: selectedAllergens,
         ingredients: ingredientsArray,
         featured: data.featured || false,
         visibility: data.visibility !== false, // Default to true if undefined
@@ -231,6 +235,8 @@ const MenuManager = () => {
       reset();
       setShowForm(false);
       setImagePreview(null);
+      setSelectedDietary([]);
+      setSelectedAllergens([]);
       
       // Clear the file input
       if (fileInput) {
@@ -256,7 +262,7 @@ const MenuManager = () => {
     }
   };
 
-  // Edit menu item with enhanced handling
+  // Edit menu item with enhanced handling for dietary and allergens
   const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
     setValue('name', item.name);
@@ -268,6 +274,8 @@ const MenuManager = () => {
     setValue('featured', item.featured || false);
     setValue('visibility', item.visibility !== false); // Default to true if undefined
     
+    setSelectedDietary(item.dietary || []);
+    setSelectedAllergens(item.allergens || []);
     setImagePreview(item.image || null);
     
     setShowForm(true);
@@ -314,8 +322,8 @@ const MenuManager = () => {
     setEditingItem(null);
     setShowForm(false);
     setImagePreview(null);
-    setNewCategoryName('');
-    setShowNewCategoryInput(false);
+    setSelectedDietary([]);
+    setSelectedAllergens([]);
     reset();
   };
 
@@ -341,6 +349,9 @@ const MenuManager = () => {
       }
     }
   };
+
+  // Basic categories for new items
+  const categories = ['appetizers', 'mains', 'desserts', 'beverages', 'sides', 'specials'];
 
   // Render loading state
   if (loading) {
@@ -473,65 +484,17 @@ const MenuManager = () => {
                 </div>
               </div>
               
-              {/* Category Selection with Add New Option */}
               <div>
                 <label className="block text-sm text-amber-400/80 mb-1">Category *</label>
-                <div className="space-y-2">
-                  <select
-                    {...register('category', { required: 'Category is required' })}
-                    className="w-full bg-charcoal border border-amber-600/30 text-cream px-4 py-2 focus:border-amber-400 focus:outline-none rounded-md"
-                  >
-                    <option value="">
-                      {availableCategories.length === 0 ? 'Create your first category below' : 'Select Category'}
-                    </option>
-                    {availableCategories.map(cat => (
-                      <option key={cat} value={cat} className="capitalize">{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
-                    ))}
-                  </select>
-                  
-                  {/* Add New Category Option */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowNewCategoryInput(!showNewCategoryInput)}
-                      className="text-amber-400 hover:text-amber-300 text-sm underline flex items-center gap-1"
-                    >
-                      <Plus size={14} />
-                      {showNewCategoryInput ? 'Cancel' : 'Add New Category'}
-                    </button>
-                  </div>
-                  
-                  {showNewCategoryInput && (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="flex gap-2"
-                    >
-                      <input
-                        type="text"
-                        value={newCategoryName}
-                        onChange={(e) => setNewCategoryName(e.target.value)}
-                        placeholder="Enter new category name (e.g. appetizers, mains)"
-                        className="flex-1 bg-charcoal border border-amber-600/30 text-cream px-4 py-2 focus:border-amber-400 focus:outline-none rounded-md"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddNewCategory();
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddNewCategory}
-                        disabled={!newCategoryName.trim()}
-                        className="bg-amber-600 hover:bg-amber-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-black px-4 py-2 rounded-md transition-colors"
-                      >
-                        Add & Select
-                      </button>
-                    </motion.div>
-                  )}
-                </div>
+                <select
+                  {...register('category', { required: 'Category is required' })}
+                  className="w-full bg-charcoal border border-amber-600/30 text-cream px-4 py-2 focus:border-amber-400 focus:outline-none rounded-md"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map(cat => (
+                    <option key={cat} value={cat} className="capitalize">{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+                  ))}
+                </select>
                 {errors.category && <p className="text-red-400 text-sm mt-1">{errors.category.message}</p>}
               </div>
               
@@ -554,6 +517,54 @@ const MenuManager = () => {
                   rows={2}
                   className="w-full bg-charcoal border border-amber-600/30 text-cream px-4 py-2 focus:border-amber-400 focus:outline-none rounded-md"
                 />
+              </div>
+              
+              {/* Dietary Options */}
+              <div>
+                <label className="block text-sm text-amber-400/80 mb-2 flex items-center gap-2">
+                  <Leaf size={16} /> Dietary Options
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {DIETARY_OPTIONS.map(option => (
+                    <button
+                      type="button"
+                      key={option}
+                      onClick={() => toggleDietaryTag(option)}
+                      className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                        selectedDietary.includes(option)
+                          ? 'bg-green-600/20 border-green-400 text-green-400'
+                          : 'border-cream/20 text-cream/70 hover:border-cream/40'
+                      }`}
+                    >
+                      {selectedDietary.includes(option) && <Check size={12} className="inline mr-1" />}
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Allergens */}
+              <div>
+                <label className="block text-sm text-amber-400/80 mb-2 flex items-center gap-2">
+                  <ShieldAlert size={16} /> Allergen Warnings
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {ALLERGEN_OPTIONS.map(allergen => (
+                    <button
+                      type="button"
+                      key={allergen}
+                      onClick={() => toggleAllergenTag(allergen)}
+                      className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                        selectedAllergens.includes(allergen)
+                          ? 'bg-red-600/20 border-red-400 text-red-400'
+                          : 'border-cream/20 text-cream/70 hover:border-cream/40'
+                      }`}
+                    >
+                      {selectedAllergens.includes(allergen) && <Check size={12} className="inline mr-1" />}
+                      {allergen}
+                    </button>
+                  ))}
+                </div>
               </div>
               
               {/* Image Upload */}
@@ -761,6 +772,27 @@ const MenuManager = () => {
                   <Badge variant="outline" className="bg-charcoal/60 text-cream/70 border-cream/20 text-xs capitalize">
                     {item.category}
                   </Badge>
+                  
+                  {item.dietary && item.dietary.map(tag => (
+                    <Badge 
+                      key={tag} 
+                      variant="outline" 
+                      className="bg-green-900/20 text-green-400 border-green-400/30 text-xs"
+                    >
+                      <Leaf size={10} className="mr-1" />
+                      {tag}
+                    </Badge>
+                  ))}
+                  
+                  {item.allergens && item.allergens.length > 0 && (
+                    <Badge 
+                      variant="outline" 
+                      className="bg-red-900/20 text-red-400 border-red-400/30 text-xs"
+                    >
+                      <ShieldAlert size={10} className="mr-1" />
+                      {item.allergens.length} {item.allergens.length === 1 ? 'allergen' : 'allergens'}
+                    </Badge>
+                  )}
                 </div>
               </div>
               

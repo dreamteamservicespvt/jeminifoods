@@ -257,6 +257,20 @@
     animation: gradient-shift 6s ease infinite;
   }
   
+  /* Mobile Navigation Bottom Flush */
+  @media (max-width: 768px) {
+    .mobile-nav-flush {
+      bottom: 0 !important;
+      margin-bottom: 0 !important;
+      padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    }
+    
+    .mobile-nav-content {
+      padding-top: 0.5rem !important;
+      padding-bottom: 0.5rem !important;
+    }
+  }
+
   .touch-ripple {
     @apply relative overflow-hidden;
   }

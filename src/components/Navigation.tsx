@@ -8,8 +8,7 @@ const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { user, loading } = useUserAuthOnly();
-  const location = useLocation();
-  // Handle scroll effects with improved performance
+  const location = useLocation();  // Handle scroll effects with improved performance
   useEffect(() => {
     let ticking = false;
     
@@ -19,7 +18,6 @@ const Navigation = () => {
           const offset = window.scrollY;
           const newScrolled = offset > 80;
           if (newScrolled !== scrolled) {
-            console.log('Navigation scroll state changed:', { offset, newScrolled });
             setScrolled(newScrolled);
           }
           ticking = false;
@@ -129,11 +127,9 @@ const Navigation = () => {
             </button>
           </div>
         </div>
-      </nav>
-
-      {/* Mobile Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-md z-40 border-t border-amber-800/30">
-        <div className="flex justify-around items-center py-3 px-2">          {navItems.slice(0, 5).map((link) => {
+      </nav>      {/* Mobile Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-md z-40 border-t border-amber-800/30 mobile-nav-flush">
+        <div className="flex justify-around items-center mobile-nav-content px-2">{navItems.slice(0, 5).map((link) => {
             return (
               <Link
                 key={link.path}

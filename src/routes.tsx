@@ -57,13 +57,11 @@ const AppRoutes = () => {
       
       {/* Authentication routes without TitleBar and Navigation */}
       <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-      
-      {/* Public routes with Navigation only */}
+      <Route path="/signup" element={<Signup />} />      {/* Public routes with Navigation only */}
       <Route path="/*" element={
         <>
           <Navigation />
-          <div className="pb-0">
+          <div className="pb-14 md:pb-0">
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/menu" element={<Menu />} />

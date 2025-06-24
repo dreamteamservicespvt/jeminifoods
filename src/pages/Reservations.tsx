@@ -290,7 +290,7 @@ const Reservations = () => {  // Form state
   const onSubmit = async (data: ReservationForm) => {
     try {
       setIsSubmitting(true);
-      console.log('Submitting reservation:', data);
+      // Submitting reservation data
         // Add to Firestore
       const docRef = await addDoc(collection(db, 'reservations'), {
         name: data.name.trim(),
@@ -318,7 +318,7 @@ const Reservations = () => {  // Form state
       });
       
       setReservationId(docRef.id);
-      console.log('Reservation submitted successfully', docRef.id);
+      // Reservation submitted successfully
       
       // Show success state
       setIsSubmitted(true);

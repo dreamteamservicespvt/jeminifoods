@@ -130,7 +130,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       audio.volume = 0.3;
       audio.play().catch(() => {}); // Fail silently
     } catch (error) {
-      console.log('Could not play notification sound');
+      // Notification sound could not be played
     }
   };
 

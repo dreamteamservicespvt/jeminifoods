@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { 
   Search, Star, Heart, Clock, Leaf, Flame, Zap, 
   Award, Gift, X, Plus, Grid3X3, List, 
-  SlidersHorizontal, ChefHat, Coffee, Utensils,
+  ChefHat, Coffee, Utensils,
   Eye, ImageIcon, Timer, Users, ShoppingCart, 
-  Minus, Info, Star as StarIcon, RefreshCw
+  Minus, Info, Star as StarIcon, RefreshCw, Lightbulb
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,8 +27,6 @@ interface MenuItem {
   price: number;
   category: string;
   image?: string;
-  dietary?: string[];
-  allergens?: string[];
   featured?: boolean;
   ingredients?: string[];
   specialOffer?: boolean;
@@ -50,19 +48,41 @@ interface CartItem extends MenuItem {
   specialInstructions?: string;
 }
 
-// Enhanced Category Configuration
-const categoryConfig = {
+// Base Category Configuration - will be extended with actual categories from menu items
+const baseCategoryConfig = {
   all: { 
     title: 'All Dishes', 
     icon: Utensils, 
     emoji: '🍽️', 
     description: 'Explore our complete culinary collection'
   },
+  "chef's specials": { 
+    title: "Chef's Specials", 
+    icon: Award, 
+    emoji: '⭐', 
+    description: 'Signature dishes from our master chefs'
+  },
+};
+
+// Default configurations for common categories
+const defaultCategoryMappings: Record<string, any> = {
+  appetizers: { 
+    title: 'Appetizers', 
+    icon: ChefHat, 
+    emoji: '🥗', 
+    description: 'Perfect beginnings to your culinary journey'
+  },
   starters: { 
     title: 'Appetizers', 
     icon: ChefHat, 
     emoji: '🥗', 
     description: 'Perfect beginnings to your culinary journey'
+  },
+  mains: { 
+    title: 'Main Courses', 
+    icon: Utensils, 
+    emoji: '🍛', 
+    description: 'Hearty dishes crafted to perfection'
   },
   'main course': { 
     title: 'Main Courses', 
@@ -82,53 +102,21 @@ const categoryConfig = {
     emoji: '🥤', 
     description: 'Refreshing drinks to complement your meal'
   },
-  "chef's specials": { 
-    title: "Chef's Specials", 
-    icon: Award, 
-    emoji: '⭐', 
-    description: 'Signature dishes from our master chefs'
+  sides: { 
+    title: 'Sides', 
+    icon: Utensils, 
+    emoji: '🥙', 
+    description: 'Perfect accompaniments to your meal'
+  },
+  specials: { 
+    title: 'Specials', 
+    icon: Star, 
+    emoji: '🌟', 
+    description: 'Limited time offerings'
   },
 };
 
-// Dietary Tags Configuration
-const dietaryTags = {
-  vegetarian: {
-    icon: Leaf,
-    bgColor: 'bg-emerald-500',
-    textColor: 'text-white',
-    borderColor: 'border-emerald-500'
-  },
-  vegan: {
-    icon: Leaf,
-    bgColor: 'bg-green-600',
-    textColor: 'text-white',
-    borderColor: 'border-green-600'
-  },
-  'gluten-free': {
-    icon: Award,
-    bgColor: 'bg-blue-500',
-    textColor: 'text-white',
-    borderColor: 'border-blue-500'
-  },
-  spicy: {
-    icon: Flame,
-    bgColor: 'bg-red-500',
-    textColor: 'text-white',
-    borderColor: 'border-red-500'
-  },
-  healthy: {
-    icon: Heart,
-    bgColor: 'bg-pink-500',
-    textColor: 'text-white',
-    borderColor: 'border-pink-500'
-  },
-  quick: {
-    icon: Zap,
-    bgColor: 'bg-yellow-500',
-    textColor: 'text-black',
-    borderColor: 'border-yellow-500'
-  }
-};
+
 
 const Menu = () => {
   const navigate = useNavigate();
@@ -137,13 +125,13 @@ const Menu = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedDietaryFilters, setSelectedDietaryFilters] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [sortBy, setSortBy] = useState<'price' | 'rating' | 'name' | 'newest' | 'popular'>('name');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [showFilters, setShowFilters] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [heroImageIndex, setHeroImageIndex] = useState(0);
+  const [isHeroPaused, setIsHeroPaused] = useState(false);
   
   // Cart and Details Modal State
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -158,6 +146,87 @@ const Menu = () => {
   const { scrollY } = useScroll();
   const headerOpacity = useTransform(scrollY, [0, 100], [1, 0.95]);
 
+  // Hero background images from menu items
+  const heroBackgroundImages = useMemo(() => {
+    // Filter menu items that have images
+    const itemsWithImages = menuItems
+      .filter(item => item.image && item.image.trim() !== '')
+      .slice(0, 12); // Limit to 12 images for performance
+    
+    return itemsWithImages.length > 0 ? itemsWithImages : [];
+  }, [menuItems]);
+
+  // Fallback background images when no menu items have images
+  const fallbackBackgroundImages = [
+    'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=2000&q=80',
+    'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80',
+    'https://images.unsplash.com/photo-1551218808-94e220e084d2?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80',
+    'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80'
+  ];
+
+  // Use menu item images if available, otherwise use fallbacks
+  const backgroundImages = heroBackgroundImages.length > 0 ? heroBackgroundImages : 
+    fallbackBackgroundImages.map((url, index) => ({ 
+      id: `fallback-${index}`, 
+      name: 'Culinary Excellence',
+      image: url,
+      description: 'Discover our exquisite dishes'
+    }));
+
+  // Auto-rotate hero background images
+  useEffect(() => {
+    if (backgroundImages.length <= 1 || isHeroPaused) return;
+
+    const interval = setInterval(() => {
+      setHeroImageIndex((prevIndex) => 
+        (prevIndex + 1) % backgroundImages.length
+      );
+    }, 6000); // Change image every 6 seconds
+
+    return () => clearInterval(interval);
+  }, [backgroundImages.length, isHeroPaused]);
+
+  // Build dynamic category configuration from actual menu items
+  const categoryConfig = useMemo(() => {
+    const actualCategories = [...new Set(menuItems.map(item => item.category.toLowerCase()))];
+    const config: Record<string, any> = { ...baseCategoryConfig };
+    
+    // Add categories from menu items
+    actualCategories.forEach(category => {
+      if (!config[category]) {
+        // Use default mapping if available, otherwise create a generic one
+        config[category] = defaultCategoryMappings[category] || {
+          title: category.charAt(0).toUpperCase() + category.slice(1),
+          icon: Utensils,
+          emoji: '🍽️',
+          description: `Delicious ${category} options`
+        };
+      }
+    });
+    
+    return config;
+  }, [menuItems]);
+
+  // Available categories (only those with items + special categories)
+  const availableCategories = useMemo(() => {
+    const actualCategories = [...new Set(menuItems.map(item => item.category.toLowerCase()))];
+    const categories = ['all'];
+    
+    // Add categories that have items
+    actualCategories.forEach(category => {
+      if (!categories.includes(category)) {
+        categories.push(category);
+      }
+    });
+    
+    // Add "chef's specials" if there are featured items
+    if (menuItems.some(item => item.featured)) {
+      categories.push("chef's specials");
+    }
+    
+    return categories;
+  }, [menuItems]);
+  
   // Fetch menu items from Firebase
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -178,65 +247,69 @@ const Menu = () => {
     return () => unsubscribe();
   }, []);
 
-  // Get available dietary filters based on menu items
-  const getAvailableDietaryFilters = () => {
-    const availableFilters = new Set<string>();
+  // Filter and search logic with real-time search for best UX
+  const filteredItems = useMemo(() => {
+    return menuItems.filter(item => {
+      // Category filter
+      if (selectedCategory !== 'all') {
+        if (selectedCategory === "chef's specials" && !item.featured) return false;
+        if (selectedCategory !== "chef's specials" && item.category.toLowerCase() !== selectedCategory.toLowerCase()) return false;
+      }
+
+      // Real-time search filter for immediate response
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const searchableText = [
+          item.name,
+          item.description,
+          ...(item.ingredients || []),
+          item.category
+        ].join(' ').toLowerCase();
+        
+        if (!searchableText.includes(query)) return false;
+      }
+
+      return true;
+    });
+  }, [menuItems, selectedCategory, searchQuery]);
+
+  // Sort items with memoization
+  const sortedItems = useMemo(() => {
+    return [...filteredItems].sort((a, b) => {
+      switch (sortBy) {
+        case 'price':
+          return a.price - b.price;
+        case 'rating':
+          return (b.rating || 0) - (a.rating || 0);
+        case 'popular':
+          return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+        case 'name':
+        default:
+          return a.name.localeCompare(b.name);
+      }
+    });
+  }, [filteredItems, sortBy]);
+
+  // Enhanced search suggestions
+  const searchSuggestions = useMemo(() => {
+    if (!searchQuery || searchQuery.length < 2) return [];
+    
+    const query = searchQuery.toLowerCase();
+    const suggestions = new Set<string>();
     
     menuItems.forEach(item => {
-      if (item.dietary) {
-        item.dietary.forEach(diet => availableFilters.add(diet));
+      // Add matching names
+      if (item.name.toLowerCase().includes(query)) {
+        suggestions.add(item.name);
+      }
+      // Add matching categories
+      if (item.category.toLowerCase().includes(query)) {
+        suggestions.add(item.category);
       }
     });
     
-    return Array.from(availableFilters).filter(filter => dietaryTags[filter]);
-  };
-
-  // Filter and search logic
-  const filteredItems = menuItems.filter(item => {
-    // Category filter
-    if (selectedCategory !== 'all') {
-      if (selectedCategory === "chef's specials" && !item.featured) return false;
-      if (selectedCategory !== "chef's specials" && item.category.toLowerCase() !== selectedCategory.toLowerCase()) return false;
-    }
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const searchableText = [
-        item.name,
-        item.description,
-        ...(item.ingredients || []),
-        ...(item.dietary || []),
-        item.category
-      ].join(' ').toLowerCase();
-      
-      if (!searchableText.includes(query)) return false;
-    }
-
-    // Dietary filters
-    if (selectedDietaryFilters.length > 0) {
-      return selectedDietaryFilters.every(filter => {
-        return item.dietary?.includes(filter);
-      });
-    }
-
-    return true;
-  });
-
-  // Sort items
-  const sortedItems = [...filteredItems].sort((a, b) => {
-    switch (sortBy) {
-      case 'price':
-        return a.price - b.price;
-      case 'rating':
-        return (b.rating || 0) - (a.rating || 0);
-      case 'popular':
-        return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
-      case 'name':
-      default:
-        return a.name.localeCompare(b.name);
-    }
-  });
+    return Array.from(suggestions).slice(0, 5);
+  }, [menuItems, searchQuery]);
 
   // Handle favorite toggle
   const handleToggleFavorite = (item: MenuItem, e: React.MouseEvent) => {
@@ -358,18 +431,8 @@ const Menu = () => {
     setShowItemDetails(true);
   };
 
-  // Toggle dietary filter
-  const toggleDietaryFilter = (filterId: string) => {
-    setSelectedDietaryFilters(prev => 
-      prev.includes(filterId) 
-        ? prev.filter(id => id !== filterId)
-        : [...prev, filterId]
-    );
-  };
-
   const clearAllFilters = () => {
     setSelectedCategory('all');
-    setSelectedDietaryFilters([]);
     setSearchQuery('');
   };
 
@@ -383,25 +446,82 @@ const Menu = () => {
     return menuItems.filter(item => item.category.toLowerCase() === category.toLowerCase()).length;
   };
 
-  const activeFiltersCount = selectedDietaryFilters.length + (selectedCategory !== 'all' ? 1 : 0);
+  const activeFiltersCount = (selectedCategory !== 'all' ? 1 : 0);
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-cream">
-      {/* Hero Header with Parallax */}
+      {/* Enhanced Hero Header with Dynamic Background Slideshow */}
       <motion.div 
         className="relative h-[40vh] md:h-[50vh] overflow-hidden"
         style={{ opacity: headerOpacity }}
+        onMouseEnter={() => setIsHeroPaused(true)}
+        onMouseLeave={() => setIsHeroPaused(false)}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-transparent z-10" />
-        <motion.div
-          className="absolute inset-0 bg-cover bg-center bg-fixed"
-          style={{
-            backgroundImage: 'url(https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=2000&q=80)',
-            y: useTransform(scrollY, [0, 300], [0, -100])
-          }}
+        {/* Dynamic Background Images Slideshow */}
+        <div className="absolute inset-0 z-0">
+          <AnimatePresence mode="wait">
+            {backgroundImages.length > 0 && (
+              <motion.div
+                key={`hero-bg-${heroImageIndex}`}
+                initial={{ opacity: 0, scale: 1.05 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 2, ease: "easeInOut" }}
+                className="absolute inset-0 w-full h-full"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/20 animate-pulse opacity-30 z-[1]" />
+                <img
+                  src={backgroundImages[heroImageIndex]?.image}
+                  alt={backgroundImages[heroImageIndex]?.name || 'Culinary Excellence'}
+                  className="w-full h-full object-cover object-center transition-transform duration-1000 hover:scale-105"
+                  loading="eager"
+                  onError={(e) => {
+                    // Fallback to next image if current one fails to load
+                    const target = e.target as HTMLImageElement;
+                    if (target.src !== fallbackBackgroundImages[0]) {
+                      target.src = fallbackBackgroundImages[0];
+                    }
+                  }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {/* Enhanced overlay gradients for better text readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black/80 z-[1]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60 z-[1]" />
+        </div>
+
+        {/* Subtle pattern overlay for texture */}
+        <div className="absolute inset-0 z-[2] opacity-5" 
+             style={{
+               backgroundImage: 'radial-gradient(circle, rgba(245, 158, 11, 0.3) 1px, transparent 1px)',
+               backgroundSize: '20px 20px'
+             }} 
         />
+
+        {/* Slideshow indicators - only show if multiple images */}
+        {backgroundImages.length > 1 && (
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-[5] flex space-x-2">
+            {backgroundImages.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setHeroImageIndex(index)}
+                className={cn(
+                  "w-2 h-2 rounded-full transition-all duration-300",
+                  index === heroImageIndex 
+                    ? "bg-amber-400 shadow-lg" 
+                    : "bg-white/40 hover:bg-white/60"
+                )}
+                aria-label={`View image ${index + 1}`}
+              />
+            ))}
+          </div>
+        )}
         
-        <div className="relative z-20 h-full flex items-center justify-center text-center px-4">
+        <div className="relative z-10 h-full flex items-center justify-center text-center px-4">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -409,7 +529,7 @@ const Menu = () => {
             className="space-y-6"
           >
             <motion.h1 
-              className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white"
+              className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white drop-shadow-2xl"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -418,13 +538,26 @@ const Menu = () => {
               <span className="bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent"> Excellence</span>
             </motion.h1>
             <motion.p 
-              className="text-lg md:text-xl text-cream/90 max-w-2xl mx-auto leading-relaxed"
+              className="text-lg md:text-xl text-cream/95 max-w-2xl mx-auto leading-relaxed drop-shadow-lg"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
             >
               Discover our carefully crafted dishes, each a masterpiece of flavor and artistry
             </motion.p>
+            
+            {/* Subtle indicator for dynamic backgrounds */}
+            {heroBackgroundImages.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="flex items-center justify-center gap-2 mt-4 text-xs text-cream/60"
+              >
+                <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                <span>Featuring our signature dishes</span>
+              </motion.div>
+            )}
           </motion.div>
         </div>
       </motion.div>
@@ -443,7 +576,7 @@ const Menu = () => {
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-cream/60 w-5 h-5" />
               <Input
                 type="text"
-                placeholder="Search dishes, ingredients, or dietary preferences..."
+                placeholder="Search for dishes, ingredients, or cuisines..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsSearchFocused(true)}
@@ -467,6 +600,41 @@ const Menu = () => {
                 </Button>
               )}
             </div>
+            
+            {/* Search Suggestions Dropdown - World-class UX */}
+            <AnimatePresence>
+              {searchQuery && searchSuggestions.length > 0 && isSearchFocused && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute top-full left-0 right-0 mt-2 bg-black/95 backdrop-blur-xl border border-amber-500/30 rounded-xl shadow-2xl shadow-amber-500/20 z-50 overflow-hidden"
+                >
+                  <div className="p-2 border-b border-amber-500/20">
+                    <p className="text-xs text-amber-400 font-medium px-3 py-1">Suggestions</p>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {searchSuggestions.map((suggestion, index) => (
+                      <motion.button
+                        key={suggestion}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        onClick={() => {
+                          setSearchQuery(suggestion);
+                          setIsSearchFocused(false);
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-amber-500/10 transition-colors text-cream hover:text-amber-400 flex items-center gap-3 group"
+                      >
+                        <Search className="w-4 h-4 text-amber-400/60 group-hover:text-amber-400" />
+                        <span className="text-sm">{suggestion}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* View Toggle and Stats */}
@@ -512,10 +680,10 @@ const Menu = () => {
         <div className="bg-black/40 backdrop-blur-sm border-t border-cream/10">
           <div className="container mx-auto px-4 py-4">
             <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-              {Object.keys(categoryConfig).map((category) => {
+              {availableCategories.map((category) => {
                 const categoryInfo = categoryConfig[category as keyof typeof categoryConfig];
                 const itemCount = getItemCount(category);
-                const IconComponent = categoryInfo.icon;
+                const IconComponent = categoryInfo?.icon || Utensils;
                 
                 return (
                   <motion.button
@@ -531,11 +699,11 @@ const Menu = () => {
                     )}
                   >
                     {isMobile ? (
-                      <span className="text-lg">{categoryInfo.emoji}</span>
+                      <span className="text-lg">{categoryInfo?.emoji || '🍽️'}</span>
                     ) : (
                       <IconComponent className="w-4 h-4" />
                     )}
-                    <span className="capitalize">{category === "chef's specials" ? "Chef's Specials" : category}</span>
+                    <span className="capitalize">{categoryInfo?.title || category}</span>
                     <Badge 
                       variant="secondary" 
                       className={cn(
@@ -554,65 +722,7 @@ const Menu = () => {
           </div>
         </div>
 
-        {/* Dietary Filters */}
-        <div className="bg-black/20 backdrop-blur-sm border-t border-cream/10">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4 text-cream/70" />
-                <span className="text-sm font-medium text-cream">Dietary Preferences</span>
-                {selectedDietaryFilters.length > 0 && (
-                  <Badge className="bg-amber-500 text-black text-xs">
-                    {selectedDietaryFilters.length} active
-                  </Badge>
-                )}
-              </div>
-              {isMobile && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="text-amber-400 hover:text-amber-300 text-sm"
-                >
-                  {showFilters ? 'Hide' : 'Show'} Filters
-                </Button>
-              )}
-            </div>
-            
-            <motion.div 
-              className={cn(
-                "flex gap-2 overflow-x-auto scrollbar-hide transition-all",
-                isMobile && !showFilters && "h-0 overflow-hidden opacity-0"
-              )}
-              initial={isMobile ? { height: 0, opacity: 0 } : {}}
-              animate={isMobile ? { height: showFilters ? 'auto' : 0, opacity: showFilters ? 1 : 0 } : {}}
-            >
-              {getAvailableDietaryFilters().map((filter) => {
-                const isSelected = selectedDietaryFilters.includes(filter);
-                const tagInfo = dietaryTags[filter];
-                const IconComponent = tagInfo.icon;
-                
-                return (
-                  <motion.button
-                    key={filter}
-                    onClick={() => toggleDietaryFilter(filter)}
-                    whileHover={{ scale: 1.05, y: -1 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all whitespace-nowrap touch-manipulation border",
-                      isSelected
-                        ? `${tagInfo.bgColor} ${tagInfo.textColor} border-transparent shadow-lg`
-                        : "bg-black/30 text-cream border-cream/20 hover:bg-black/50 hover:border-cream/40"
-                    )}
-                  >
-                    <IconComponent className="w-3 h-3" />
-                    <span className="capitalize">{filter}</span>
-                  </motion.button>
-                );
-              })}
-            </motion.div>
-          </div>
-        </div>
+
       </motion.div>
 
       {/* Menu Items */}
@@ -679,28 +789,23 @@ const Menu = () => {
             >
               {searchQuery ? (
                 <>
-                  No dishes match your search for <span className="text-amber-400 font-semibold">"{searchQuery}"</span>
+                  We couldn't find any dishes matching <span className="text-amber-400 font-semibold">"{searchQuery}"</span>.
+                  <br />
+                  <span className="text-amber-400/80">Try a different search term or explore our categories below.</span>
                 </>
               ) : selectedCategory !== 'all' ? (
                 <>
-                  No dishes found in <span className="text-amber-400 font-semibold capitalize">
+                  No dishes are currently available in our <span className="text-amber-400 font-semibold capitalize">
                     {selectedCategory === "chef's specials" ? "Chef's Specials" : selectedCategory}
-                  </span> category
-                  {selectedDietaryFilters.length > 0 && (
-                    <span> with your dietary preferences</span>
-                  )}
-                </>
-              ) : selectedDietaryFilters.length > 0 ? (
-                <>
-                  No dishes match your dietary filters: <span className="text-amber-400 font-semibold">
-                    {selectedDietaryFilters.join(', ')}
-                  </span>
+                  </span> category.
+                  <br />
+                  <span className="text-amber-400/80">Please check back soon or explore our other delicious options.</span>
                 </>
               ) : (
                 <>
-                  We couldn't find any menu items matching your current filters.
+                  We're currently updating our menu selection.
                   <br />
-                  <span className="text-amber-400/80">Try adjusting your search or explore our other categories.</span>
+                  <span className="text-amber-400/80">Please check back in a moment for our amazing dishes.</span>
                 </>
               )}
             </motion.p>
@@ -715,27 +820,48 @@ const Menu = () => {
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedCategory('all');
-                  setSelectedDietaryFilters([]);
                 }}
                 className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black px-8 py-4 font-semibold rounded-xl shadow-xl hover:shadow-amber-600/30 transition-all duration-300 transform hover:scale-105"
               >
                 <Utensils className="w-5 h-5 mr-2" />
-                View All Items
+                Explore All Dishes
               </Button>
               
               <Button
                 variant="outline"
                 onClick={() => {
                   setSelectedCategory("chef's specials");
-                  setSelectedDietaryFilters([]);
                   setSearchQuery('');
                 }}
                 className="border-amber-600/40 text-amber-400 hover:bg-amber-600/10 hover:border-amber-600/60 px-8 py-4 font-semibold rounded-xl transition-all duration-300"
               >
                 <Star className="w-5 h-5 mr-2" />
-                Chef's Specials
+                Try Chef's Specials
               </Button>
             </motion.div>
+            
+            {/* Popular Search Suggestions */}
+            {!searchQuery && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="mt-8 max-w-2xl mx-auto"
+              >
+                <p className="text-cream/60 text-sm mb-4">Popular searches:</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {['Biryani', 'Pasta', 'Pizza', 'Dessert', 'Vegetarian', 'Seafood'].map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => setSearchQuery(suggestion)}
+                      className="px-4 py-2 bg-black/20 border border-cream/10 rounded-full text-cream/70 text-sm hover:bg-amber-600/10 hover:border-amber-600/30 hover:text-amber-400 transition-all duration-300 transform hover:scale-105"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
           </motion.div>
         ) : (
           <motion.div
@@ -933,35 +1059,6 @@ const Menu = () => {
                       {item.description}
                     </p>
 
-                    {/* Dietary Tags */}
-                    {item.dietary && item.dietary.length > 0 && viewMode === 'grid' && (
-                      <div className="flex flex-wrap gap-2">
-                        {item.dietary.slice(0, 3).map((diet) => {
-                          const tagInfo = dietaryTags[diet];
-                          if (!tagInfo) return null;
-                          
-                          const IconComponent = tagInfo.icon;
-                          return (
-                            <Badge
-                              key={diet}
-                              className={cn(
-                                "text-xs font-medium border backdrop-blur-sm",
-                                `${tagInfo.bgColor}/20 ${tagInfo.textColor.replace('text-white', 'text-cream')} ${tagInfo.borderColor}/30`
-                              )}
-                            >
-                              <IconComponent className="w-3 h-3 mr-1" />
-                              {diet}
-                            </Badge>
-                          );
-                        })}
-                        {item.dietary.length > 3 && (
-                          <Badge variant="outline" className="text-xs text-cream/60 border-cream/20 backdrop-blur-sm">
-                            +{item.dietary.length - 3} more
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-
                     {/* Spice Level */}
                     {item.spiceLevel && item.spiceLevel > 0 && viewMode === 'grid' && (
                       <div className="flex items-center gap-2">
@@ -1021,7 +1118,7 @@ const Menu = () => {
       </div>
 
       {/* Mobile Safe Area */}
-      <div className="h-24 md:h-0"></div>
+      <div className="h-16 md:h-0"></div>
 
       {/* Floating Cart Button */}
       <AnimatePresence>
@@ -1190,33 +1287,6 @@ const Menu = () => {
                     )}
                   </div>
 
-                  {/* Dietary Tags */}
-                  {selectedItem.dietary && selectedItem.dietary.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-cream">Dietary Information:</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedItem.dietary.map((diet) => {
-                          const tagInfo = dietaryTags[diet];
-                          if (!tagInfo) return null;
-                          
-                          const IconComponent = tagInfo.icon;
-                          return (
-                            <Badge
-                              key={diet}
-                              className={cn(
-                                "text-sm font-medium border backdrop-blur-sm",
-                                `${tagInfo.bgColor}/20 ${tagInfo.textColor.replace('text-white', 'text-cream')} ${tagInfo.borderColor}/30`
-                              )}
-                            >
-                              <IconComponent className="w-4 h-4 mr-2" />
-                              {diet}
-                            </Badge>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Prep Time and Spice Level */}
                   <div className="grid grid-cols-2 gap-4">
                     {selectedItem.preparationTime && (
@@ -1255,18 +1325,6 @@ const Menu = () => {
                     </div>
                   )}
 
-                  {/* Allergens */}
-                  {selectedItem.allergens && selectedItem.allergens.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-cream flex items-center gap-2">
-                        <Info className="w-4 h-4 text-amber-400" />
-                        Allergen Information:
-                      </h4>
-                      <p className="text-red-400 text-sm">
-                        Contains: {selectedItem.allergens.join(', ')}
-                      </p>
-                    </div>
-                  )}
                 </div>
 
                 {/* Actions */}

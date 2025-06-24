@@ -391,9 +391,9 @@ const PreOrders = () => {
       
       if (paymentScreenshot) {
         try {
-          console.log("Uploading payment screenshot to Cloudinary...");
+          // Uploading payment screenshot to Cloudinary
           paymentScreenshotUrl = await uploadToCloudinary(paymentScreenshot);
-          console.log("Cloudinary upload successful, URL:", paymentScreenshotUrl);
+          // Cloudinary upload successful
         } catch (uploadError) {
           console.error("Cloudinary upload error:", uploadError);
           toast({
@@ -428,7 +428,7 @@ const PreOrders = () => {
         imageProvider: "cloudinary", // Add this to track where images are stored
         userId: user?.uid || null // Add userId for dashboard sync
       };
-        console.log("Submitting order data to Firebase:", orderData);
+        // Submitting order data to Firebase
         // Submit to Firebase
       await addDoc(collection(db, "preOrders"), orderData);
 

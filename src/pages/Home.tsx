@@ -34,11 +34,9 @@ const Home = () => {
       setIsLoaded(true);
     }, 800);
   }, []);
-
   // Image error handling function
   const handleImageError = (index: number) => {
     setImageLoadErrors(prev => ({...prev, [index]: true}));
-    console.error(`Failed to load image for feature ${index}`);
   };
 
   // Optimize the feature cards by using CSS backgrounds instead of image loading

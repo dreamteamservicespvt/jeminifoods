@@ -810,7 +810,7 @@ const Menu = () => {
       </div>
 
       {/* Mobile Safe Area */}
-      <div className="h-24 md:h-0"></div>
+      <div className="h-16 md:h-0"></div>
     </div>
   );
 };

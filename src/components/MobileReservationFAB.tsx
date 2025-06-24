@@ -53,10 +53,9 @@ const MobileReservationFAB = () => {
       isExternal: true
     }
   ];
-
   return (
     <>
-      <div className="fixed right-6 bottom-20 z-50">
+      <div className="fixed right-6 bottom-14 z-50">
         <AnimatePresence>
           {isExpanded && (
             <motion.div 

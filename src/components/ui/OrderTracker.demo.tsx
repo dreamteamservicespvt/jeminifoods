@@ -25,7 +25,7 @@ export const OrderTrackerDemo = () => {
 
   const handleStatusChange = (newStatus: OrderStatus) => {
     setDemoStatus(newStatus);
-    console.log(`Status updated to: ${newStatus}`);
+    // Status updated
   };
 
   const statusOptions: OrderStatus[] = ['booked', 'taken', 'making', 'ready'];
@@ -164,7 +164,7 @@ export const OrderTrackerDemo = () => {
                 taken: "14:30"
               }}
               isEditable={true}
-              onStatusChange={(status) => console.log('Admin updated:', status)}
+              onStatusChange={(status) => {/* Admin status update */}}
               variant="compact"
             />
           </CardContent>

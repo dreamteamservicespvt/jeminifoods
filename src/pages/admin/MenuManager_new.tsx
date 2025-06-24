@@ -60,31 +60,23 @@ const MenuManager = () => {
   // Get form values
   const watchFeatured = watch("featured", false);
   const watchVisibility = watch("visibility", true);
-  const watchCategory = watch("category", "");
   
-  // All categories from existing menu items only (no hardcoded categories)
+  // All categories from items + basic defaults
   const existingCategories = [...new Set(menuItems.map(item => item.category))];
   const allCategories = ['all', ...existingCategories];
-  // Include the currently selected category if it's new (not yet saved to database)
-  const availableCategories = [...new Set([...existingCategories, ...(watchCategory && !existingCategories.includes(watchCategory) ? [watchCategory] : [])])];
+  const basicCategories = ['appetizers', 'mains', 'desserts', 'beverages', 'sides', 'specials'];
+  const availableCategories = [...new Set([...basicCategories, ...existingCategories])];
 
   // Handle new category creation
   const handleAddNewCategory = () => {
-    if (newCategoryName.trim() && !existingCategories.includes(newCategoryName.trim().toLowerCase())) {
+    if (newCategoryName.trim() && !availableCategories.includes(newCategoryName.trim().toLowerCase())) {
       const newCategory = newCategoryName.trim().toLowerCase();
-      // Immediately set the new category as selected
       setValue('category', newCategory);
       setNewCategoryName('');
       setShowNewCategoryInput(false);
       toast({
         title: "Success",
-        description: `New category "${newCategory}" selected! It will be created when you save the item.`
-      });
-    } else if (existingCategories.includes(newCategoryName.trim().toLowerCase())) {
-      toast({
-        title: "Category exists",
-        description: "This category already exists. Please choose a different name.",
-        variant: "destructive"
+        description: `New category "${newCategory}" will be created when you save the item.`
       });
     }
   };
@@ -481,9 +473,7 @@ const MenuManager = () => {
                     {...register('category', { required: 'Category is required' })}
                     className="w-full bg-charcoal border border-amber-600/30 text-cream px-4 py-2 focus:border-amber-400 focus:outline-none rounded-md"
                   >
-                    <option value="">
-                      {availableCategories.length === 0 ? 'Create your first category below' : 'Select Category'}
-                    </option>
+                    <option value="">Select Category</option>
                     {availableCategories.map(cat => (
                       <option key={cat} value={cat} className="capitalize">{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
                     ))}
@@ -494,42 +484,29 @@ const MenuManager = () => {
                     <button
                       type="button"
                       onClick={() => setShowNewCategoryInput(!showNewCategoryInput)}
-                      className="text-amber-400 hover:text-amber-300 text-sm underline flex items-center gap-1"
+                      className="text-amber-400 hover:text-amber-300 text-sm underline"
                     >
-                      <Plus size={14} />
                       {showNewCategoryInput ? 'Cancel' : 'Add New Category'}
                     </button>
                   </div>
                   
                   {showNewCategoryInput && (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="flex gap-2"
-                    >
+                    <div className="flex gap-2">
                       <input
                         type="text"
                         value={newCategoryName}
                         onChange={(e) => setNewCategoryName(e.target.value)}
-                        placeholder="Enter new category name (e.g. appetizers, mains)"
+                        placeholder="Enter new category name"
                         className="flex-1 bg-charcoal border border-amber-600/30 text-cream px-4 py-2 focus:border-amber-400 focus:outline-none rounded-md"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddNewCategory();
-                          }
-                        }}
                       />
                       <button
                         type="button"
                         onClick={handleAddNewCategory}
-                        disabled={!newCategoryName.trim()}
-                        className="bg-amber-600 hover:bg-amber-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-black px-4 py-2 rounded-md transition-colors"
+                        className="bg-amber-600 hover:bg-amber-700 text-black px-4 py-2 rounded-md"
                       >
-                        Add & Select
+                        Add
                       </button>
-                    </motion.div>
+                    </div>
                   )}
                 </div>
                 {errors.category && <p className="text-red-400 text-sm mt-1">{errors.category.message}</p>}
