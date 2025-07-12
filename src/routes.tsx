@@ -11,6 +11,7 @@ import NewReservations from "./pages/NewReservations";
 import UnifiedReservationPage from "./pages/UnifiedReservationPage";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import UserDashboard from "./pages/UserDashboard";
@@ -81,8 +82,10 @@ const AppRoutes = () => {
               </React.Suspense>} />
               <Route path="/legacy-reservations" element={<Reservations />} />              <Route path="/preorders" element={<PreOrders />} />
               <Route path="/pre-orders" element={<PreOrders />} />
-              <Route path="/my-orders" element={<MyOrders />} /><Route path="/about" element={<About />} />
+              <Route path="/my-orders" element={<MyOrders />} />              <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/privacypolicy" element={<PrivacyPolicy />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/dashboard" element={<UserDashboard />} />
               <Route path="/multi-session-demo" element={<MultiSessionDemo />} />
               <Route path="/excellence" element={<Excellence />} />

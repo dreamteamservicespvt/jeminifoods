@@ -160,14 +160,14 @@ const Footer = () => {
                 © {currentYear} Jemini Foods. All rights reserved.
               </p>
               <div className="flex space-x-6 text-sm">
-                <a
-                  href="#"
+                <Link
+                  to="/privacypolicy"
                   className="text-cream/70 hover:text-amber-400 transition-all relative group"
-                  onClick={e => { e.preventDefault(); scrollToTop(); }}
+                  onClick={scrollToTop}
                 >
                   Privacy Policy
                   <span className="absolute -bottom-1 left-0 w-0 h-px bg-amber-400/50 group-hover:w-full transition-all duration-300"></span>
-                </a>
+                </Link>
                 <a
                   href="#"
                   className="text-cream/70 hover:text-amber-400 transition-all relative group"

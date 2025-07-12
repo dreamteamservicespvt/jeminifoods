@@ -414,9 +414,9 @@ const Menu = () => {
              }} 
         />
 
-        {/* Elegant slideshow indicators - only show if multiple images */}
+        {/* Elegant slideshow indicators - only show if multiple images and not on mobile */}
         {backgroundImages.length > 1 && (
-          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-[5] flex justify-center gap-2">
+          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-[5] hidden md:flex justify-center gap-2">
             {backgroundImages.map((_, index) => (
               <button
                 key={index}
