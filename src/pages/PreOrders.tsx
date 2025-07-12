@@ -19,23 +19,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { uploadToCloudinary } from "../lib/cloudinary";
 import { Link } from "react-router-dom";
+import { useCart, formatPrice, MenuItem, CartItem } from '../contexts/CartContext';
 
-// Enhanced MenuItem type with dietary information
-interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  image?: string;
+// Enhanced MenuItem type with dietary information for local use
+interface LocalMenuItem extends MenuItem {
   dietary?: string[]; // Vegan, Vegetarian, Gluten-Free, etc.
   allergens?: string[]; // Nuts, Dairy, Shellfish, etc.
   isSpecial?: boolean; // Chef's special
-}
-
-interface CartItem extends MenuItem {
-  quantity: number;
-  specialInstructions?: string;
 }
 
 interface PreOrder {
@@ -64,11 +54,21 @@ const PreOrders = () => {
   const upiCurrency = "INR";
   const { user } = useUserAuth();
   const { toast } = useToast();
+  const {
+    cart,
+    addToCart,
+    removeFromCart,
+    updateCartItemQuantity,
+    updateCartItemInstructions,
+    clearCart,
+    getCartItemCount,
+    getCartTotal,
+    isCartEmpty
+  } = useCart();
   
   const [preOrders, setPreOrders] = useState<PreOrder[]>([]);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [filteredItems, setFilteredItems] = useState<MenuItem[]>([]);
+  const [menuItems, setMenuItems] = useState<LocalMenuItem[]>([]);
+  const [filteredItems, setFilteredItems] = useState<LocalMenuItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeDietary, setActiveDietary] = useState<string | null>(null);
@@ -121,7 +121,11 @@ const PreOrders = () => {
       try {
         const cartData = JSON.parse(transferredCart);
         if (Array.isArray(cartData) && cartData.length > 0) {
-          setCart(cartData);
+          // Clear existing cart and add transferred items
+          clearCart();
+          cartData.forEach((item: CartItem) => {
+            addToCart(item, item.quantity, item.specialInstructions);
+          });
           setShowCart(true); // Show cart immediately
           localStorage.removeItem('menuCartTransfer'); // Clean up
           toast({
@@ -134,7 +138,7 @@ const PreOrders = () => {
         localStorage.removeItem('menuCartTransfer'); // Clean up on error
       }
     }
-  }, []);
+  }, [addToCart, clearCart]);
 
   // Fetch menu items
   useEffect(() => {
@@ -148,7 +152,7 @@ const PreOrders = () => {
             [dietaryOptions[Math.floor(Math.random() * dietaryOptions.length)]] : 
             []),
         isSpecial: doc.data().isSpecial || Math.random() > 0.8
-      } as MenuItem));
+      } as LocalMenuItem));
       
       setMenuItems(items);
       setFilteredItems(items);
@@ -211,25 +215,9 @@ const PreOrders = () => {
     setSearchQuery(e.target.value);
   };
 
-  // Calculate total cart value
-  const calculateTotal = () => {
-    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  };
-
-  // Handle add to cart
-  const addToCart = (item: MenuItem) => {
-    setCart(prevCart => {
-      const existingItem = prevCart.find(i => i.id === item.id);
-      if (existingItem) {
-        return prevCart.map(i => 
-          i.id === item.id 
-            ? { ...i, quantity: i.quantity + 1 } 
-            : i
-        );
-      } else {
-        return [...prevCart, { ...item, quantity: 1 }];
-      }
-    });
+  // Handle add to cart with feedback
+  const handleAddToCart = (item: LocalMenuItem) => {
+    addToCart(item);
     
     // Visual feedback
     toast({
@@ -239,41 +227,14 @@ const PreOrders = () => {
     });
     
     // Show cart after adding first item
-    if (cart.length === 0) {
+    if (isCartEmpty()) {
       setTimeout(() => setShowCart(true), 300);
     }
   };
 
-  // Handle remove from cart
-  const removeFromCart = (id: string) => {
-    setCart(prevCart => {
-      const existingItem = prevCart.find(i => i.id === id);
-      if (existingItem && existingItem.quantity > 1) {
-        return prevCart.map(i => 
-          i.id === id 
-            ? { ...i, quantity: i.quantity - 1 } 
-            : i
-        );
-      } else {
-        return prevCart.filter(i => i.id !== id);
-      }
-    });
-  };
-
-  // Handle delete from cart
-  const deleteFromCart = (id: string) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== id));
-  };
-
   // Handle special instructions
   const handleSpecialInstructions = (id: string, instructions: string) => {
-    setCart(prevCart => 
-      prevCart.map(item => 
-        item.id === id 
-          ? { ...item, specialInstructions: instructions } 
-          : item
-      )
-    );
+    updateCartItemInstructions(id, instructions);
   };
 
   // Initialize checkout process
@@ -445,7 +406,7 @@ const PreOrders = () => {
       // Show success state
       setNewOrderId(orderId);
       setOrderSuccess(true);
-      setCart([]);
+      clearCart();
       
       // Fire confetti
       setTimeout(() => {
@@ -534,14 +495,15 @@ const PreOrders = () => {
         // Ensure all required MenuItem properties exist
         description: item.description || '',
         category: item.category || 'other',
-        dietary: item.dietary || [],
-        allergens: item.allergens || [],
-        isSpecial: item.isSpecial || false,
         specialInstructions: item.specialInstructions || ''
       }));
       
       if (validItems.length > 0) {
-        setCart(validItems);
+        // Clear cart and add valid items
+        clearCart();
+        validItems.forEach(item => {
+          addToCart(item, item.quantity, item.specialInstructions);
+        });
         setShowCart(true);
         
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -750,7 +712,7 @@ const PreOrders = () => {
                   
                   {/* Quick Add Button */}
                   <motion.button
-                    onClick={() => addToCart(item)}
+                    onClick={() => handleAddToCart(item)}
                     initial={{ opacity: 0 }}
                     whileHover={{ scale: 1.1 }}
                     animate={{ opacity: 1 }}
@@ -771,7 +733,7 @@ const PreOrders = () => {
                 <div className="p-4 sm:p-6">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold text-lg text-amber-400">{item.name}</h3>
-                    <span className="text-amber-400 font-bold">${item.price.toFixed(2)}</span>
+                    <span className="text-amber-400 font-bold">{formatPrice(item.price)}</span>
                   </div>
                   
                   <p className="text-cream/80 text-sm mb-4 line-clamp-2">
@@ -794,7 +756,7 @@ const PreOrders = () => {
                   
                   {/* Add to Cart Button */}
                   <Button 
-                    onClick={() => addToCart(item)}
+                    onClick={() => handleAddToCart(item)}
                     className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-black font-semibold"
                   >
                     Add to Order
@@ -896,7 +858,7 @@ const PreOrders = () => {
                                       <div className="text-xs text-cream/60 mt-1">{item.specialInstructions}</div>
                                     )}
                                   </div>
-                                  <span>${(item.price * (item.quantity || 1)).toFixed(2)}</span>
+                                  <span>{formatPrice(item.price * (item.quantity || 1))}</span>
                                 </li>
                               ))}
                             </ul>
@@ -984,7 +946,7 @@ const PreOrders = () => {
               </div>
               
               <div className="flex-1 overflow-y-auto py-4 px-6">
-                {cart.length === 0 ? (
+                {isCartEmpty() ? (
                   <div className="text-center text-cream/70 py-12">
                     <ShoppingCart className="mx-auto mb-4" size={32} />
                     <p>Your cart is empty</p>
@@ -1015,11 +977,11 @@ const PreOrders = () => {
                         <div className="flex-1">
                           <div className="flex justify-between">
                             <h4 className="font-medium text-cream">{item.name}</h4>
-                            <span className="text-amber-400 font-semibold">${(item.price * item.quantity).toFixed(2)}</span>
+                            <span className="text-amber-400 font-semibold">{formatPrice(item.price * item.quantity)}</span>
                           </div>
                           
                           <div className="text-cream/60 text-sm mt-1">
-                            ${item.price.toFixed(2)} each
+                            {formatPrice(item.price)} each
                           </div>
                           
                           {/* Quantity controls */}
@@ -1033,7 +995,7 @@ const PreOrders = () => {
                               </button>
                               <span className="text-cream min-w-[20px] text-center">{item.quantity}</span>
                               <button 
-                                onClick={() => addToCart(item)}
+                                onClick={() => handleAddToCart(item)}
                                 className="w-7 h-7 rounded-full bg-charcoal flex items-center justify-center text-cream hover:bg-amber-600/20 transition-colors"
                               >
                                 <Plus size={14} />
@@ -1041,7 +1003,7 @@ const PreOrders = () => {
                             </div>
                             
                             <button 
-                              onClick={() => deleteFromCart(item.id)}
+                              onClick={() => removeFromCart(item.id)}
                               className="text-cream/50 hover:text-red-400 transition-colors"
                             >
                               <Trash2 size={16} />
@@ -1067,12 +1029,12 @@ const PreOrders = () => {
               <div className="border-t border-amber-600/20 px-6 py-4 space-y-4">
                 <div className="flex justify-between text-cream text-sm">
                   <span>Subtotal</span>
-                  <span>₹{calculateTotal().toFixed(2)}</span>
+                  <span>{formatPrice(getCartTotal())}</span>
                 </div>
                 
                 <Button
                   onClick={startCheckout}
-                  disabled={cart.length === 0}
+                  disabled={isCartEmpty()}
                   className="w-full bg-amber-600 hover:bg-amber-700 text-black font-bold py-3 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <ChevronRight size={18} />
@@ -1085,7 +1047,7 @@ const PreOrders = () => {
       </AnimatePresence>
       
       {/* Floating Cart Button */}
-      {cart.length > 0 && !showCart && !isCheckingOut && !orderSuccess && (
+      {!isCartEmpty() && !showCart && !isCheckingOut && !orderSuccess && (
         <motion.button
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -1279,13 +1241,13 @@ const PreOrders = () => {
                               <div className="text-xs text-cream/60 mt-1">{item.specialInstructions}</div>
                             )}
                           </div>
-                          <span className="text-amber-400">${(item.price * item.quantity).toFixed(2)}</span>
+                          <span className="text-amber-400">{formatPrice(item.price * item.quantity)}</span>
                         </div>
                       ))}
                       
                       <div className="flex justify-between pt-2 font-semibold">
                         <span className="text-cream">Total</span>
-                        <span className="text-amber-400">₹{calculateTotal().toFixed(2)}</span>
+                        <span className="text-amber-400">{formatPrice(getCartTotal())}</span>
                       </div>
                     </div>
                     
@@ -1349,7 +1311,7 @@ const PreOrders = () => {
                   >
                     <h4 className="text-lg font-medium text-amber-400 mb-2">Payment</h4>
                     <p className="text-cream/80 mb-4">
-                      Please complete your payment to confirm your pre-order. Your order total is <span className="text-amber-400 font-bold">₹{calculateTotal().toFixed(2)}</span>.
+                      Please complete your payment to confirm your pre-order. Your order total is <span className="text-amber-400 font-bold">{formatPrice(getCartTotal())}</span>.
                     </p>
                     
                     {/* Payment Method Selection */}
@@ -1385,7 +1347,7 @@ const PreOrders = () => {
                         <h5 className="text-black font-medium mb-4">Scan QR Code to Pay</h5>
                         <div className="bg-white p-4 rounded-lg shadow-md mb-4">
                           <QRCode 
-                            value={generateUpiLink(calculateTotal(), checkoutForm.name, generateOrderId())}
+                            value={generateUpiLink(getCartTotal(), checkoutForm.name, generateOrderId())}
                             size={200}
                             level="H"
                           />
@@ -1413,7 +1375,7 @@ const PreOrders = () => {
                         </div>
                         
                         <Button 
-                          onClick={() => window.location.href = generateUpiLink(calculateTotal(), checkoutForm.name, generateOrderId())}
+                          onClick={() => window.location.href = generateUpiLink(getCartTotal(), checkoutForm.name, generateOrderId())}
                           className="w-full mb-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-600 text-white py-3 font-bold flex items-center justify-center gap-2"
                         >
                           <CreditCard size={18} />
@@ -1425,7 +1387,7 @@ const PreOrders = () => {
                           <p>2. Or open any UPI app manually (Google Pay, PhonePe, Paytm, etc.)</p>
                           <p>3. Select "Send Money" or "Pay" option</p>
                           <p>4. Enter the UPI ID shown above</p>
-                          <p>5. Enter amount: <span className="text-amber-400">₹{calculateTotal().toFixed(2)}</span></p>
+                          <p>5. Enter amount: <span className="text-amber-400">{formatPrice(getCartTotal())}</span></p>
                           <p>6. In payment note, include: <span className="text-amber-400">Pre-Order - {checkoutForm.name}</span></p>
                         </div>
                       </div>

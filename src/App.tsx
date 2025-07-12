@@ -5,7 +5,9 @@ import { useEffect } from "react";
 import AppRoutes from './routes';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { MultiAuthProvider } from './contexts/MultiAuthContext';
+import { CartProvider } from './contexts/CartContext';
 import LoadingScreen from './components/LoadingScreen';
+import { PersistentCartIcon } from './components/PersistentCart';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -29,18 +31,23 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <MultiAuthProvider>
-          <NotificationProvider>
-            <div className="relative min-h-screen bg-charcoal text-cream">
-              <ScrollToTop />
-              <Toaster />
-              <Sonner />
-              {loadingComplete ? (
-                <AppRoutes />
-              ) : (
-                <LoadingScreen onComplete={() => setLoadingComplete(true)} />
-              )}
-            </div>
-          </NotificationProvider>
+          <CartProvider>
+            <NotificationProvider>
+              <div className="relative min-h-screen bg-charcoal text-cream">
+                <ScrollToTop />
+                <Toaster />
+                <Sonner />
+                {loadingComplete ? (
+                  <div className="main-content">
+                    <AppRoutes />
+                    <PersistentCartIcon />
+                  </div>
+                ) : (
+                  <LoadingScreen onComplete={() => setLoadingComplete(true)} />
+                )}
+              </div>
+            </NotificationProvider>
+          </CartProvider>
         </MultiAuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

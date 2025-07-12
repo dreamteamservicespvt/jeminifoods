@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MenuManager from './MenuManager';
 import GalleryManager from './GalleryManager';
 import ReservationManager from './ReservationManager';
+import EnhancedReservationManager from './EnhancedReservationManager';
 import ContactManager from './ContactManager';
 import AboutManager from './AboutManager';
 import AdminPreOrders from '../../AdminPreOrders';
@@ -142,7 +143,7 @@ const AdminDashboard = () => {
           >
             {activeTab === 'menu' && <MenuManager />}
             {activeTab === 'gallery' && <GalleryManager />}
-            {activeTab === 'reservations' && <ReservationManager />}
+            {activeTab === 'reservations' && <EnhancedReservationManager />}
             {activeTab === 'preorders' && <AdminPreOrders />}
             {activeTab === 'about' && <AboutManager />}
             {activeTab === 'contacts' && <ContactManager />}

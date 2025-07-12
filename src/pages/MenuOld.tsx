@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useFavorites } from '../hooks/useFavorites';
 import FavoriteButton from '../components/favorites/FavoriteButton';
 import MobileMenuHeader from '@/components/menu/MobileMenuHeader';
+import { formatPrice } from '../contexts/CartContext';
 
 interface MenuItem {
   id: string;
@@ -164,11 +165,6 @@ const dietaryTags = {
     color: "bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-700/50",
     hoverColor: "hover:bg-pink-200 dark:hover:bg-pink-900/50"
   }
-};
-
-// Utility function to format price in Indian Rupees
-const formatPrice = (price: number): string => {
-  return `â‚¹${price.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 };
 
 const Menu = () => {  // State

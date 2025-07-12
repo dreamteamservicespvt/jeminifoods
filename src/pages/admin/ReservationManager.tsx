@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Calendar, Clock, Users, Phone, Mail, User, Check, X, Eye } from 'lucide-react';
-import { useAdminNotifications } from '../../hooks/useNotificationActions';
-import { useToast } from '../../components/ui/use-toast';
+import { useAdminReservationNotifications } from '../../hooks/useReservationNotifications';
+import { showSuccessToast, showErrorToast, showWarningToast } from '@/lib/enhanced-toast-helpers';
+import { useToast } from '@/hooks/use-toast';
 
 interface Reservation {
   id: string;
@@ -25,8 +26,8 @@ const ReservationManager = () => {
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled'>('all');
   
-  const { sendReservationConfirmed, sendReservationCancelled } = useAdminNotifications();
   const { toast } = useToast();
+  const { sendReservationConfirmation, sendReservationCancellation } = useAdminReservationNotifications();
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'reservations'), (snapshot) => {
@@ -51,30 +52,17 @@ const ReservationManager = () => {
 
       if (status === 'confirmed') {
         // Send confirmation notifications
-        const success = await sendReservationConfirmed(
-          reservation.userId || 'guest',
-          {
-            id: reservation.id,
-            userName: reservation.name,
-            userEmail: reservation.email,
-            userPhone: reservation.phone,
-            date: reservation.date,
-            time: reservation.time,
-            guests: reservation.guests,
-            tableNumber: reservation.tableId || 'TBD'
-          }
-        );
+        const success = await sendReservationConfirmation(reservation.id);
 
         if (success) {
-          toast({
+          showSuccessToast({
             title: "Reservation Confirmed",
-            description: `${reservation.name}'s reservation confirmed and notifications sent.`,
+            message: `${reservation.name}'s reservation confirmed and notifications sent.`,
           });
         } else {
-          toast({
+          showWarningToast({
             title: "Reservation Confirmed",
-            description: "Reservation confirmed but some notifications failed to send.",
-            variant: "destructive"
+            message: "Reservation confirmed but some notifications failed to send.",
           });
         }
 
@@ -94,36 +82,25 @@ const ReservationManager = () => {
         }
       } else if (status === 'cancelled') {
         // Send cancellation notifications
-        const success = await sendReservationCancelled(
-          reservation.userId || 'guest',
-          {
-            id: reservation.id,
-            userName: reservation.name,
-            userPhone: reservation.phone,
-            date: reservation.date,
-            time: reservation.time
-          }
-        );
+        const success = await sendReservationCancellation(reservation.id);
 
         if (success) {
-          toast({
+          showSuccessToast({
             title: "Reservation Cancelled",
-            description: `${reservation.name}'s reservation cancelled and notifications sent.`,
+            message: `${reservation.name}'s reservation cancelled and notifications sent.`,
           });
         } else {
-          toast({
+          showWarningToast({
             title: "Reservation Cancelled", 
-            description: "Reservation cancelled but some notifications failed to send.",
-            variant: "destructive"
+            message: "Reservation cancelled but some notifications failed to send.",
           });
         }
       }
     } catch (error) {
       console.error("Error updating reservation:", error);
-      toast({
+      showErrorToast({
         title: "Error",
-        description: "Failed to update reservation status.",
-        variant: "destructive"
+        message: "Failed to update reservation status.",
       });
     }
   };

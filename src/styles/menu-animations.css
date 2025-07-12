@@ -161,6 +161,66 @@
   animation: text-glow 3s ease-in-out infinite;
 }
 
+/* Cart animations */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.menu-cart-enter {
+  animation: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.menu-cart-exit {
+  animation: slide-out-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Cart item animations */
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cart-item-enter {
+  animation: fade-in-down 0.3s ease forwards;
+}
+
+/* Add to cart button animation */
+@keyframes add-to-cart-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.add-to-cart-button:active {
+  animation: add-to-cart-pulse 0.3s ease;
+}
+
 /* Responsive improvements */
 @media (max-width: 768px) {
   .menu-card:hover .menu-card-image {

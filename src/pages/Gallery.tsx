@@ -9,6 +9,7 @@ import { GalleryItem, MediaCategory, CATEGORY_LABELS } from '../types/gallery';
 import { useGalleryData } from '../hooks/useGalleryData';
 import { useFavorites } from '../hooks/useFavorites';
 import Navigation from '../components/Navigation';
+import { CarouselIndicators } from '../components/ui/carousel-indicators';
 
 // World-class mobile Gallery styles with hero enhancements
 const mobileGalleryStyles = `
@@ -448,7 +449,7 @@ const Gallery: React.FC = () => {
               )}
             </motion.div>
 
-            {/* Image counter and navigation dots */}
+            {/* Elegant image counter and navigation dots */}
             {backgroundImages.length > 1 && (
               <motion.div 
                 className="flex justify-center items-center gap-4 mt-8"
@@ -456,26 +457,18 @@ const Gallery: React.FC = () => {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.8, delay: 0.8 }}
               >
-                <div className="flex gap-2">
-                  {backgroundImages.slice(0, 5).map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setHeroImageIndex(index)}
-                      className={cn(
-                        "w-2 h-2 rounded-full transition-all duration-300 hover:scale-125",
-                        heroImageIndex === index
-                          ? "bg-amber-400 w-8 shadow-lg shadow-amber-400/50"
-                          : "bg-cream/30 hover:bg-cream/50"
-                      )}
-                      aria-label={`View background image ${index + 1}`}
-                    />
-                  ))}
-                  {backgroundImages.length > 5 && (
-                    <span className="text-cream/50 text-xs ml-2">
-                      +{backgroundImages.length - 5} more
-                    </span>
-                  )}
-                </div>
+                <CarouselIndicators
+                  total={Math.min(backgroundImages.length, 5)}
+                  current={heroImageIndex}
+                  onSelect={setHeroImageIndex}
+                  variant="minimal"
+                  showProgress={false}
+                />
+                {backgroundImages.length > 5 && (
+                  <span className="text-cream/50 text-xs ml-2">
+                    +{backgroundImages.length - 5} more
+                  </span>
+                )}
               </motion.div>
             )}
           </motion.div>

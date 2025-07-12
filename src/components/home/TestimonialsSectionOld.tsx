@@ -54,6 +54,8 @@ const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testimonials 
         behavior: 'smooth'
       });
     }
+  }, [isMobile, currentIndex]);
+
   const handlePrevious = () => {
     setIsPaused(true);
     setCurrentIndex(prev => prev === 0 ? testimonials.length - 1 : prev - 1);
@@ -200,44 +202,6 @@ const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testimonials 
                       ? "bg-brand-primary w-6" 
                       : "bg-brand-border hover:bg-brand-primary/50"
                   )}
-                  aria-label={`Go to testimonial ${index + 1}`}
-                />
-              ))}
-            </div>
-          </div>
-        ) : (
-                  
-                  <p className="text-cream text-center italic mb-6 leading-relaxed text-sm">
-                    "{testimonial.text}"
-                  </p>
-                  
-                  <div className="text-center">
-                    <p className="text-amber-400 font-semibold text-sm">
-                      {testimonial.author}
-                    </p>
-                    <p className="text-cream/60 text-xs">
-                      {testimonial.position}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Dots Indicator */}
-            <div className="flex justify-center mt-6 gap-2">
-              {testimonials.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    setCurrentIndex(index);
-                    setIsAutoScrolling(false);
-                    setTimeout(() => setIsAutoScrolling(true), 5000);
-                  }}
-                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                    index === currentIndex 
-                      ? 'bg-amber-400 w-6' 
-                      : 'bg-amber-400/30 hover:bg-amber-400/50'
-                  }`}
                   aria-label={`Go to testimonial ${index + 1}`}
                 />
               ))}

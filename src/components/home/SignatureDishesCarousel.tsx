@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { CarouselIndicators } from '../ui/carousel-indicators';
+import { formatPrice } from '../../contexts/CartContext';
 
 interface Dish {
   id: string;
@@ -207,7 +209,7 @@ const SignatureDishesCarousel: React.FC<SignatureDishesCarouselProps> = ({ dishe
                       <h3 className="text-2xl font-serif font-bold text-amber-400 mb-2">{dish.name}</h3>
                       <p className="text-cream/80 mb-4 line-clamp-2">{dish.description}</p>
                       <div className="flex justify-between items-center">
-                        <span className="text-amber-400 font-bold text-xl">${dish.price.toFixed(2)}</span>
+                        <span className="text-amber-400 font-bold text-xl">{formatPrice(dish.price)}</span>
                         <motion.div
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
@@ -227,26 +229,21 @@ const SignatureDishesCarousel: React.FC<SignatureDishesCarouselProps> = ({ dishe
             </div>
           </div>
           
-          {/* Indicator Dots */}
-          <div className="flex justify-center space-x-2 mt-8">
-            {displayDishes.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  if (carouselRef.current) {
-                    const itemWidth = carouselRef.current.offsetWidth / 2;
-                    carouselRef.current.scrollLeft = index * itemWidth;
-                    setActiveIndex(index);
-                  }
-                }}
-                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                  activeIndex === index 
-                    ? 'bg-amber-400 w-6' 
-                    : 'bg-amber-400/30 hover:bg-amber-400/50'
-                }`}
-                aria-label={`Go to dish ${index + 1}`}
-              />
-            ))}
+          {/* Elegant Indicator Dots */}
+          <div className="flex justify-center mt-8">
+            <CarouselIndicators
+              total={displayDishes.length}
+              current={activeIndex}
+              onSelect={(index) => {
+                if (carouselRef.current) {
+                  const itemWidth = carouselRef.current.offsetWidth / 2;
+                  carouselRef.current.scrollLeft = index * itemWidth;
+                  setActiveIndex(index);
+                }
+              }}
+              variant="dots"
+              showProgress={false}
+            />
           </div>
         </div>
         

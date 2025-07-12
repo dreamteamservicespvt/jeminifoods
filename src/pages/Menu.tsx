@@ -3,52 +3,31 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { 
-  Search, Star, Heart, Clock, Leaf, Flame, Zap, 
-  Award, Gift, X, Plus, Grid3X3, List, 
-  ChefHat, Coffee, Utensils,
-  Eye, ImageIcon, Timer, Users, ShoppingCart, 
-  Minus, Info, Star as StarIcon, RefreshCw, Lightbulb
+  Search, Star, Heart, Clock, Leaf, Flame, Zap, Users, 
+  Award, Gift, ShoppingBag, ArrowRight, X, Plus, Grid3X3, List, 
+  SlidersHorizontal, ChefHat, Coffee, Utensils, Eye, TrendingUp,
+  MapPin, Timer, Sparkles, ThumbsUp, Camera, Play, StarIcon
 } from 'lucide-react';
+
+// UI Components
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { useMediaQuery } from '@/hooks/use-media-query';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+// Contexts and Hooks
 import { cn } from '@/lib/utils';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { useFavorites } from '../hooks/useFavorites';
 import { useToast } from '@/components/ui/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
 import { useUserAuthOnly } from '../contexts/MultiAuthContext';
+import { useCart, MenuItem, formatPrice } from '../contexts/CartContext';
 
-interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  image?: string;
-  featured?: boolean;
-  ingredients?: string[];
-  specialOffer?: boolean;
-  specialOfferText?: string;
-  variations?: {
-    size: string;
-    price: number;
-  }[];
-  visibility?: boolean;
-  videoUrl?: string;
-  preparationTime?: number;
-  spiceLevel?: number;
-  rating?: number;
-  reviewCount?: number;
-}
+// Components
+import MenuCart, { MenuCartToggle } from '../components/MenuCart';
 
-interface CartItem extends MenuItem {
-  quantity: number;
-  specialInstructions?: string;
-}
-
-// Base Category Configuration - will be extended with actual categories from menu items
+// Category Configuration
 const baseCategoryConfig = {
   all: { 
     title: 'All Dishes', 
@@ -99,28 +78,21 @@ const defaultCategoryMappings: Record<string, any> = {
   beverages: { 
     title: 'Beverages', 
     icon: Coffee, 
-    emoji: '🥤', 
-    description: 'Refreshing drinks to complement your meal'
+    emoji: '☕', 
+    description: 'Refreshing drinks and specialty coffees'
   },
-  sides: { 
-    title: 'Sides', 
-    icon: Utensils, 
-    emoji: '🥙', 
-    description: 'Perfect accompaniments to your meal'
-  },
-  specials: { 
-    title: 'Specials', 
-    icon: Star, 
-    emoji: '🌟', 
-    description: 'Limited time offerings'
-  },
+  drinks: { 
+    title: 'Beverages', 
+    icon: Coffee, 
+    emoji: '☕', 
+    description: 'Refreshing drinks and specialty coffees'
+  }
 };
-
-
 
 const Menu = () => {
   const navigate = useNavigate();
   const { user } = useUserAuthOnly();
+  const { addToCart, cart, getCartItemCount } = useCart();
   
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,9 +105,7 @@ const Menu = () => {
   const [heroImageIndex, setHeroImageIndex] = useState(0);
   const [isHeroPaused, setIsHeroPaused] = useState(false);
   
-  // Cart and Details Modal State
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [showCart, setShowCart] = useState(false);
+  // Details Modal State
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [showItemDetails, setShowItemDetails] = useState(false);
   
@@ -331,22 +301,27 @@ const Menu = () => {
     }
   };
 
-  // Cart functionality
-  const addToCart = (item: MenuItem, e?: React.MouseEvent) => {
+  // Cart state
+  const [showCart, setShowCart] = useState(false);
+  const cartItemCount = getCartItemCount();
+  
+  // Show cart when first item is added
+  useEffect(() => {
+    if (cartItemCount > 0 && !showCart && !isMobile) {
+      setShowCart(true);
+    }
+  }, [cartItemCount, showCart, isMobile]);
+  
+  // Handle cart toggle
+  const toggleCart = () => {
+    setShowCart(prev => !prev);
+  };
+  
+  // Handle adding item to cart with visual feedback
+  const handleAddToCart = (item: MenuItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     
-    setCart(prevCart => {
-      const existingItem = prevCart.find(i => i.id === item.id);
-      if (existingItem) {
-        return prevCart.map(i => 
-          i.id === item.id 
-            ? { ...i, quantity: i.quantity + 1 } 
-            : i
-        );
-      } else {
-        return [...prevCart, { ...item, quantity: 1 }];
-      }
-    });
+    addToCart(item);
     
     // Visual feedback
     toast({
@@ -355,73 +330,10 @@ const Menu = () => {
       duration: 1500,
     });
     
-    // Show cart after adding first item
-    if (cart.length === 0) {
-      setTimeout(() => setShowCart(true), 300);
+    // Auto-open cart on first item add
+    if (cartItemCount === 0) {
+      setShowCart(true);
     }
-  };
-
-  const removeFromCart = (id: string) => {
-    setCart(prevCart => {
-      const existingItem = prevCart.find(i => i.id === id);
-      if (existingItem && existingItem.quantity > 1) {
-        return prevCart.map(i => 
-          i.id === id 
-            ? { ...i, quantity: i.quantity - 1 } 
-            : i
-        );
-      } else {
-        return prevCart.filter(i => i.id !== id);
-      }
-    });
-  };
-
-  const deleteFromCart = (id: string) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== id));
-  };
-
-  const calculateTotal = () => {
-    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  };
-
-  const getCartItemCount = () => {
-    return cart.reduce((sum, item) => sum + item.quantity, 0);
-  };
-
-  // Handle checkout navigation
-  const handleProceedToCheckout = () => {
-    // Check if cart is empty
-    if (cart.length === 0) {
-      toast({
-        title: "Cart is empty",
-        description: "Please add items to your cart before proceeding to checkout.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check if user is authenticated
-    if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to proceed with your order.",
-        variant: "destructive",
-      });
-      navigate('/login');
-      return;
-    }
-
-    // Transfer cart data to localStorage for PreOrders page
-    localStorage.setItem('menuCartTransfer', JSON.stringify(cart));
-    
-    // Navigate to PreOrders page
-    navigate('/preorders');
-    
-    // Show success message
-    toast({
-      title: "Redirecting to checkout",
-      description: "Taking you to complete your order...",
-    });
   };
 
   // Handle view details
@@ -452,7 +364,7 @@ const Menu = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-cream">
-      {/* Enhanced Hero Header with Dynamic Background Slideshow */}
+      {/* Hero Header with Dynamic Background Slideshow */}
       <motion.div 
         className="relative h-[40vh] md:h-[50vh] overflow-hidden"
         style={{ opacity: headerOpacity }}
@@ -502,9 +414,9 @@ const Menu = () => {
              }} 
         />
 
-        {/* Slideshow indicators - only show if multiple images */}
+        {/* Elegant slideshow indicators - only show if multiple images */}
         {backgroundImages.length > 1 && (
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-[5] flex space-x-2">
+          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-[5] flex justify-center gap-2">
             {backgroundImages.map((_, index) => (
               <button
                 key={index}
@@ -512,10 +424,10 @@ const Menu = () => {
                 className={cn(
                   "w-2 h-2 rounded-full transition-all duration-300",
                   index === heroImageIndex 
-                    ? "bg-amber-400 shadow-lg" 
-                    : "bg-white/40 hover:bg-white/60"
+                    ? "bg-amber-400 w-8" 
+                    : "bg-white/30 hover:bg-white/50"
                 )}
-                aria-label={`View image ${index + 1}`}
+                aria-label={`Go to slide ${index + 1}`}
               />
             ))}
           </div>
@@ -564,315 +476,340 @@ const Menu = () => {
 
       {/* Search and Filters */}
       <motion.div 
-        className="bg-black/60 backdrop-blur-xl border-b border-cream/10"
+        className="bg-black/60 backdrop-blur-xl border-b border-cream/10 sticky top-0 z-40"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
       >
-        <div className="container mx-auto px-4 py-6">
-          {/* Search Bar */}
-          <div className="relative max-w-2xl mx-auto mb-6">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-cream/60 w-5 h-5" />
-              <Input
-                type="text"
-                placeholder="Search for dishes, ingredients, or cuisines..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setIsSearchFocused(false)}
-                className={cn(
-                  "w-full pl-12 pr-12 py-4 text-lg bg-black/40 backdrop-blur-sm border-2 rounded-2xl transition-all",
-                  "text-cream placeholder:text-cream/50",
-                  isSearchFocused 
-                    ? "border-amber-500 shadow-xl shadow-amber-500/20" 
-                    : "border-cream/20 hover:border-cream/40"
-                )}
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-cream/60 hover:text-cream p-2"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              )}
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
+          <div className="flex justify-between items-center mb-4">
+            {/* Search and filter controls */}
+            <div className="flex-grow max-w-2xl">
+              {/* Search Bar */}
+              <div className="relative max-w-2xl mx-auto mb-4 sm:mb-6">
+                <div className="relative">
+                  <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-cream/60 w-4 h-4 sm:w-5 sm:h-5" />
+                  <Input
+                    type="text"
+                    placeholder={isMobile ? "Search dishes..." : "Search dishes, ingredients..."}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onFocus={() => setIsSearchFocused(true)}
+                    onBlur={() => setIsSearchFocused(false)}
+                    className={cn(
+                      "w-full pl-12 pr-12 text-lg bg-black/40 backdrop-blur-sm border-2 rounded-2xl transition-all touch-manipulation",
+                      "text-cream placeholder:text-cream/50",
+                      isMobile ? "py-3 text-base" : "py-4",
+                      isSearchFocused 
+                        ? "border-amber-500 shadow-xl shadow-amber-500/20" 
+                        : "border-cream/20 hover:border-cream/40"
+                    )}
+                  />
+                  {searchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSearchQuery('')}
+                      className={cn(
+                        "absolute right-2 top-1/2 transform -translate-y-1/2 text-cream/60 hover:text-cream rounded-lg touch-manipulation",
+                        isMobile ? "p-1.5 min-h-[36px] min-w-[36px]" : "p-2"
+                      )}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                
+                {/* Search Suggestions Dropdown - World-class UX */}
+                <AnimatePresence>
+                  {searchQuery && searchSuggestions.length > 0 && isSearchFocused && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute top-full left-0 right-0 mt-2 bg-black/95 backdrop-blur-xl border border-amber-500/30 rounded-xl shadow-2xl shadow-amber-500/20 z-50 overflow-hidden"
+                    >
+                      <div className="p-2 border-b border-amber-500/20">
+                        <p className="text-xs text-amber-400 font-medium px-3 py-1">Suggestions</p>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto">
+                        {searchSuggestions.map((suggestion, index) => (
+                          <motion.button
+                            key={suggestion}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            onClick={() => {
+                              setSearchQuery(suggestion);
+                              setIsSearchFocused(false);
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-amber-500/10 transition-colors text-cream hover:text-amber-400 flex items-center gap-3 group"
+                          >
+                            <Search className="w-4 h-4 text-amber-400/60 group-hover:text-amber-400" />
+                            <span className="text-sm">{suggestion}</span>
+                          </motion.button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* View Toggle and Stats */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3 sm:gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex bg-black/40 rounded-xl p-1 backdrop-blur-sm">
+                    <Button
+                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('grid')}
+                      className={cn(
+                        "rounded-lg px-3 py-2 touch-manipulation min-h-[36px] transition-all",
+                        viewMode === 'grid' 
+                          ? "bg-amber-500 text-black shadow-lg" 
+                          : "text-cream hover:text-amber-400 hover:bg-amber-400/10"
+                      )}
+                    >
+                      <Grid3X3 className="w-4 h-4" />
+                      <span className="ml-2 text-xs hidden sm:inline">Grid</span>
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('list')}
+                      className={cn(
+                        "rounded-lg px-3 py-2 touch-manipulation min-h-[36px] transition-all",
+                        viewMode === 'list' 
+                          ? "bg-amber-500 text-black shadow-lg" 
+                          : "text-cream hover:text-amber-400 hover:bg-amber-400/10"
+                      )}
+                    >
+                      <List className="w-4 h-4" />
+                      <span className="ml-2 text-xs hidden sm:inline">List</span>
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="text-xs sm:text-sm text-cream/70 order-first sm:order-last">
+                  Showing {sortedItems.length} of {menuItems.length} dishes
+                </div>
+              </div>
             </div>
             
-            {/* Search Suggestions Dropdown - World-class UX */}
-            <AnimatePresence>
-              {searchQuery && searchSuggestions.length > 0 && isSearchFocused && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute top-full left-0 right-0 mt-2 bg-black/95 backdrop-blur-xl border border-amber-500/30 rounded-xl shadow-2xl shadow-amber-500/20 z-50 overflow-hidden"
-                >
-                  <div className="p-2 border-b border-amber-500/20">
-                    <p className="text-xs text-amber-400 font-medium px-3 py-1">Suggestions</p>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    {searchSuggestions.map((suggestion, index) => (
-                      <motion.button
-                        key={suggestion}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        onClick={() => {
-                          setSearchQuery(suggestion);
-                          setIsSearchFocused(false);
-                        }}
-                        className="w-full text-left px-4 py-3 hover:bg-amber-500/10 transition-colors text-cream hover:text-amber-400 flex items-center gap-3 group"
+            {/* Cart Toggle Button */}
+            <div className="ml-4">
+              <MenuCartToggle 
+                isOpen={showCart} 
+                onToggle={toggleCart}
+                itemCount={cartItemCount} 
+              />
+            </div>
+          </div>
+
+          {/* Category Pills */}
+          <div className="bg-black/40 backdrop-blur-sm border-t border-cream/10">
+            <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-4">
+              <div className="flex gap-2 sm:gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-1">
+                {availableCategories.map((category) => {
+                  const categoryInfo = categoryConfig[category as keyof typeof categoryConfig];
+                  const itemCount = getItemCount(category);
+                  const IconComponent = categoryInfo?.icon || Utensils;
+                  
+                  return (
+                    <motion.button
+                      key={category}
+                      onClick={() => setSelectedCategory(category)}
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
+                      className={cn(
+                        "flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl whitespace-nowrap transition-all font-medium border-2 min-w-fit touch-manipulation flex-shrink-0 min-h-[40px]",
+                        "text-xs sm:text-sm",
+                        selectedCategory === category
+                          ? "bg-gradient-to-r from-amber-600 to-amber-500 text-black border-amber-400 shadow-xl shadow-amber-600/25"
+                          : "bg-black/30 backdrop-blur-sm text-cream border-cream/20 hover:bg-black/50 hover:border-amber-600/40"
+                      )}
+                    >
+                      {isMobile ? (
+                        <span className="text-sm sm:text-lg">{categoryInfo?.emoji || '🍽️'}</span>
+                      ) : (
+                        <IconComponent className="w-3 h-3 sm:w-4 sm:h-4" />
+                      )}
+                      <span className="capitalize">{categoryInfo?.title || category}</span>
+                      <Badge 
+                        variant="secondary" 
+                        className={cn(
+                          "text-xs font-semibold px-1.5 py-0.5 sm:px-2 sm:py-1",
+                          selectedCategory === category
+                            ? "bg-black/20 text-black"
+                            : "bg-cream/20 text-cream"
+                        )}
                       >
-                        <Search className="w-4 h-4 text-amber-400/60 group-hover:text-amber-400" />
-                        <span className="text-sm">{suggestion}</span>
-                      </motion.button>
+                        {itemCount}
+                      </Badge>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+
+        </div>
+      </motion.div>
+
+      {/* Menu Content with Split Layout */}
+      <div className={cn(
+        "flex",
+        // Add left padding when cart is open on desktop to prevent content shift
+        showCart ? "md:pr-[320px]" : ""
+      )}>
+        {/* Menu Items */}
+        <div className="flex-1 container mx-auto px-4 py-8 transition-all duration-300">
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full"
+              />
+            </div>
+          ) : sortedItems.length === 0 ? (
+            <motion.div 
+              className="text-center py-20"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              {/* Enhanced animated icon */}
+              <motion.div
+                animate={{ 
+                  rotate: [0, 5, -5, 0],
+                  scale: [1, 1.05, 1]
+                }}
+                transition={{ 
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="mb-8"
+              >
+                <div className="relative inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-amber-600/20 to-amber-400/10 rounded-full border-2 border-amber-600/30">
+                  <Utensils className="text-amber-400/70" size={56} />
+                  
+                  {/* Pulsing rings */}
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-2 border-amber-600/20"
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-2 border-amber-600/10"
+                    animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0, 0.3] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                  />
+                </div>
+              </motion.div>
+              
+              <motion.h3 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-3xl md:text-4xl font-serif font-bold text-amber-400 mb-6"
+              >
+                No dishes found
+              </motion.h3>
+              
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-cream/80 max-w-xl mx-auto mb-10 text-lg leading-relaxed"
+              >
+                {searchQuery ? (
+                  <>
+                    We couldn't find any dishes matching <span className="text-amber-400 font-semibold">"{searchQuery}"</span>.
+                    <br />
+                    <span className="text-amber-400/80">Try a different search term or explore our categories below.</span>
+                  </>
+                ) : selectedCategory !== 'all' ? (
+                  <>
+                    No dishes are currently available in our <span className="text-amber-400 font-semibold capitalize">
+                      {selectedCategory === "chef's specials" ? "Chef's Specials" : selectedCategory}
+                    </span> category.
+                    <br />
+                    <span className="text-amber-400/80">Please check back soon or explore our other delicious options.</span>
+                  </>
+                ) : (
+                  <>
+                    We're currently updating our menu selection.
+                    <br />
+                    <span className="text-amber-400/80">Please check back in a moment for our amazing dishes.</span>
+                  </>
+                )}
+              </motion.p>
+              
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+              >
+                <Button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory('all');
+                  }}
+                  className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black px-8 py-4 font-semibold rounded-xl shadow-xl hover:shadow-amber-600/30 transition-all duration-300 transform hover:scale-105"
+                >
+                  <Utensils className="w-5 h-5 mr-2" />
+                  Explore All Dishes
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedCategory("chef's specials");
+                    setSearchQuery('');
+                  }}
+                  className="border-amber-600/40 text-amber-400 hover:bg-amber-600/10 hover:border-amber-600/60 px-8 py-4 font-semibold rounded-xl transition-all duration-300"
+                >
+                  <Star className="w-5 h-5 mr-2" />
+                  Try Chef's Specials
+                </Button>
+              </motion.div>
+              
+              {/* Popular Search Suggestions */}
+              {!searchQuery && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className="mt-8 max-w-2xl mx-auto"
+                >
+                  <p className="text-cream/60 text-sm mb-4">Popular searches:</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {['Biryani', 'Pasta', 'Pizza', 'Dessert', 'Vegetarian', 'Seafood'].map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        onClick={() => setSearchQuery(suggestion)}
+                        className="px-4 py-2 bg-black/20 border border-cream/10 rounded-full text-cream/70 text-sm hover:bg-amber-600/10 hover:border-amber-600/30 hover:text-amber-400 transition-all duration-300 transform hover:scale-105"
+                      >
+                        {suggestion}
+                      </button>
                     ))}
                   </div>
                 </motion.div>
               )}
-            </AnimatePresence>
-          </div>
-
-          {/* View Toggle and Stats */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <div className="flex bg-black/40 rounded-xl p-1">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className={cn(
-                    "rounded-lg",
-                    viewMode === 'grid' 
-                      ? "bg-amber-500 text-black" 
-                      : "text-cream hover:text-amber-400"
-                  )}
-                >
-                  <Grid3X3 className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className={cn(
-                    "rounded-lg",
-                    viewMode === 'list' 
-                      ? "bg-amber-500 text-black" 
-                      : "text-cream hover:text-amber-400"
-                  )}
-                >
-                  <List className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-            
-            <div className="text-sm text-cream/70">
-              Showing {sortedItems.length} of {menuItems.length} dishes
-            </div>
-          </div>
-        </div>
-
-        {/* Category Pills */}
-        <div className="bg-black/40 backdrop-blur-sm border-t border-cream/10">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-              {availableCategories.map((category) => {
-                const categoryInfo = categoryConfig[category as keyof typeof categoryConfig];
-                const itemCount = getItemCount(category);
-                const IconComponent = categoryInfo?.icon || Utensils;
-                
-                return (
-                  <motion.button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={cn(
-                      "flex items-center gap-3 px-6 py-3 rounded-2xl whitespace-nowrap transition-all font-medium text-sm border-2 min-w-fit touch-manipulation",
-                      selectedCategory === category
-                        ? "bg-gradient-to-r from-amber-600 to-amber-500 text-black border-amber-400 shadow-xl shadow-amber-600/25"
-                        : "bg-black/30 backdrop-blur-sm text-cream border-cream/20 hover:bg-black/50 hover:border-amber-600/40"
-                    )}
-                  >
-                    {isMobile ? (
-                      <span className="text-lg">{categoryInfo?.emoji || '🍽️'}</span>
-                    ) : (
-                      <IconComponent className="w-4 h-4" />
-                    )}
-                    <span className="capitalize">{categoryInfo?.title || category}</span>
-                    <Badge 
-                      variant="secondary" 
-                      className={cn(
-                        "text-xs font-semibold",
-                        selectedCategory === category
-                          ? "bg-black/20 text-black"
-                          : "bg-cream/20 text-cream"
-                      )}
-                    >
-                      {itemCount}
-                    </Badge>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-
-      </motion.div>
-
-      {/* Menu Items */}
-      <div className="container mx-auto px-4 py-8">
-        {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full"
-            />
-          </div>
-        ) : sortedItems.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="text-center py-20 px-6"
-          >
-            {/* Enhanced animated icon */}
-            <motion.div
-              animate={{ 
-                rotate: [0, 5, -5, 0],
-                scale: [1, 1.05, 1]
-              }}
-              transition={{ 
-                duration: 4,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-              className="mb-8"
-            >
-              <div className="relative inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-amber-600/20 to-amber-400/10 rounded-full border-2 border-amber-600/30">
-                <Utensils className="text-amber-400/70" size={56} />
-                
-                {/* Pulsing rings */}
-                <motion.div
-                  className="absolute inset-0 rounded-full border-2 border-amber-600/20"
-                  animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
-                <motion.div
-                  className="absolute inset-0 rounded-full border-2 border-amber-600/10"
-                  animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0, 0.3] }}
-                  transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                />
-              </div>
             </motion.div>
-            
-            <motion.h3 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-3xl md:text-4xl font-serif font-bold text-amber-400 mb-6"
-            >
-              No dishes found
-            </motion.h3>
-            
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="text-cream/80 max-w-xl mx-auto mb-10 text-lg leading-relaxed"
-            >
-              {searchQuery ? (
-                <>
-                  We couldn't find any dishes matching <span className="text-amber-400 font-semibold">"{searchQuery}"</span>.
-                  <br />
-                  <span className="text-amber-400/80">Try a different search term or explore our categories below.</span>
-                </>
-              ) : selectedCategory !== 'all' ? (
-                <>
-                  No dishes are currently available in our <span className="text-amber-400 font-semibold capitalize">
-                    {selectedCategory === "chef's specials" ? "Chef's Specials" : selectedCategory}
-                  </span> category.
-                  <br />
-                  <span className="text-amber-400/80">Please check back soon or explore our other delicious options.</span>
-                </>
-              ) : (
-                <>
-                  We're currently updating our menu selection.
-                  <br />
-                  <span className="text-amber-400/80">Please check back in a moment for our amazing dishes.</span>
-                </>
-              )}
-            </motion.p>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-            >
-              <Button
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedCategory('all');
-                }}
-                className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black px-8 py-4 font-semibold rounded-xl shadow-xl hover:shadow-amber-600/30 transition-all duration-300 transform hover:scale-105"
-              >
-                <Utensils className="w-5 h-5 mr-2" />
-                Explore All Dishes
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSelectedCategory("chef's specials");
-                  setSearchQuery('');
-                }}
-                className="border-amber-600/40 text-amber-400 hover:bg-amber-600/10 hover:border-amber-600/60 px-8 py-4 font-semibold rounded-xl transition-all duration-300"
-              >
-                <Star className="w-5 h-5 mr-2" />
-                Try Chef's Specials
-              </Button>
-            </motion.div>
-            
-            {/* Popular Search Suggestions */}
-            {!searchQuery && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                className="mt-8 max-w-2xl mx-auto"
-              >
-                <p className="text-cream/60 text-sm mb-4">Popular searches:</p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {['Biryani', 'Pasta', 'Pizza', 'Dessert', 'Vegetarian', 'Seafood'].map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => setSearchQuery(suggestion)}
-                      className="px-4 py-2 bg-black/20 border border-cream/10 rounded-full text-cream/70 text-sm hover:bg-amber-600/10 hover:border-amber-600/30 hover:text-amber-400 transition-all duration-300 transform hover:scale-105"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </motion.div>
-        ) : (
-          <motion.div
-            className={cn(
-              "grid gap-8 transition-all duration-500",
-              viewMode === 'grid' 
-                ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
-                : "grid-cols-1 max-w-4xl mx-auto"
-            )}
-            layout
-          >
+          ) : (
+            <div className={cn(
+            "grid gap-4 sm:gap-6 lg:gap-8 transition-all duration-500",
+            viewMode === 'grid' 
+              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+              : "grid-cols-1 max-w-5xl mx-auto",
+            viewMode === 'list' && isMobile && "gap-3"
+          )}>
             <AnimatePresence mode="popLayout">
               {sortedItems.map((item, index) => (
                 <motion.div
@@ -893,13 +830,19 @@ const Menu = () => {
                   className={cn(
                     "group relative bg-black/50 backdrop-blur-xl rounded-3xl overflow-hidden border border-cream/10",
                     "hover:border-amber-500/60 hover:shadow-2xl hover:shadow-amber-500/20 transition-all duration-700 cursor-pointer",
-                    viewMode === 'list' && "flex flex-row max-h-48"
+                    viewMode === 'list' && "flex flex-row gap-3 sm:gap-4 max-h-none",
+                    viewMode === 'list' && isMobile && "rounded-2xl p-3 gap-3"
                   )}
+                  onClick={() => handleViewDetails(item)}
                 >
                   {/* Image Container with Enhanced Overlay */}
                   <div className={cn(
                     "relative overflow-hidden",
-                    viewMode === 'grid' ? "aspect-[4/3]" : "w-48 h-48 flex-shrink-0"
+                    viewMode === 'grid' 
+                      ? "aspect-[4/3]" 
+                      : isMobile 
+                        ? "w-24 h-24 rounded-2xl flex-shrink-0"
+                        : "w-full h-48 sm:w-48 sm:h-48 flex-shrink-0"
                   )}>
                     {item.image ? (
                       <motion.img
@@ -929,7 +872,10 @@ const Menu = () => {
                     
                     {/* View Details Overlay Button */}
                     <motion.div
-                      className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500"
+                      className={cn(
+                        "absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500",
+                        viewMode === 'list' && isMobile && "hidden" // Hide on mobile list view for cleaner look
+                      )}
                       initial={{ scale: 0.8, opacity: 0 }}
                       whileHover={{ scale: 1, opacity: 1 }}
                     >
@@ -937,10 +883,13 @@ const Menu = () => {
                         onClick={(e) => handleViewDetails(item, e)}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black px-6 py-3 rounded-full font-semibold shadow-xl backdrop-blur-sm transition-all"
+                        className={cn(
+                          "flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold shadow-xl backdrop-blur-sm transition-all rounded-full",
+                          viewMode === 'list' ? "px-4 py-2 text-sm" : "px-6 py-3"
+                        )}
                       >
-                        <Eye className="w-4 h-4" />
-                        View Details
+                        <Eye className={cn(viewMode === 'list' ? "w-3 h-3" : "w-4 h-4")} />
+                        <span className={viewMode === 'list' ? "hidden lg:inline" : ""}>View Details</span>
                       </motion.button>
                     </motion.div>
                     
@@ -950,7 +899,12 @@ const Menu = () => {
                       whileHover={{ scale: 1.15 }}
                       whileTap={{ scale: 0.85 }}
                       className={cn(
-                        "absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center transition-all backdrop-blur-sm border-2 shadow-lg",
+                        "absolute rounded-full flex items-center justify-center transition-all backdrop-blur-sm border-2 shadow-lg",
+                        viewMode === 'list' && isMobile 
+                          ? "top-1 right-1 w-6 h-6 border-1" 
+                          : viewMode === 'list' 
+                            ? "top-2 right-2 sm:top-4 sm:right-4 w-8 h-8 sm:w-12 sm:h-12"
+                            : "top-2 right-2 sm:top-4 sm:right-4 w-12 h-12",
                         isFavorite(item.id, 'menuItem')
                           ? "bg-red-500/90 text-white border-red-400 shadow-red-500/30"
                           : "bg-black/60 text-white border-white/30 hover:bg-black/80 hover:border-white/50"
@@ -963,14 +917,26 @@ const Menu = () => {
                         transition={{ duration: 0.3 }}
                       >
                         <Heart className={cn(
-                          "w-5 h-5 transition-all",
+                          "transition-all",
+                          viewMode === 'list' && isMobile 
+                            ? "w-3 h-3" 
+                            : viewMode === 'list' 
+                              ? "w-3 h-3 sm:w-5 sm:h-5" 
+                              : "w-5 h-5",
                           isFavorite(item.id, 'menuItem') && "fill-current"
                         )} />
                       </motion.div>
                     </motion.button>
 
                     {/* Enhanced Badges */}
-                    <div className="absolute top-4 left-4 flex flex-col gap-2">
+                    <div className={cn(
+                      "absolute flex gap-1",
+                      viewMode === 'list' && isMobile 
+                        ? "top-1 left-1 flex-col scale-75 origin-top-left" 
+                        : viewMode === 'list' 
+                          ? "top-2 left-2 sm:top-4 sm:left-4 flex-col gap-1 sm:gap-2 scale-75 sm:scale-100 origin-top-left"
+                          : "top-2 left-2 sm:top-4 sm:left-4 flex-col gap-1 sm:gap-2"
+                    )}>
                       {item.specialOffer && (
                         <motion.div
                           initial={{ scale: 0, rotate: -180 }}
@@ -1018,33 +984,57 @@ const Menu = () => {
                         <span>{item.rating.toFixed(1)}</span>
                       </div>
                     )}
+
+                    {/* Mobile List View - Quick Info */}
+                    {viewMode === 'list' && isMobile && (
+                      <div className="absolute bottom-1 left-1 flex items-center gap-1">
+                        {item.preparationTime && (
+                          <div className="flex items-center gap-1 bg-black/80 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-full text-xs">
+                            <Timer className="w-2 h-2" />
+                            <span>{item.preparationTime}m</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Enhanced Content */}
                   <div className={cn(
-                    "p-6 flex flex-col",
-                    viewMode === 'list' ? "flex-1 justify-between py-6" : "space-y-4"
+                    "flex flex-col",
+                    viewMode === 'list' && isMobile 
+                      ? "flex-1 justify-between py-2 px-1 min-w-0" 
+                      : viewMode === 'list' 
+                        ? "flex-1 justify-between py-4 sm:py-6 p-4 sm:p-6" 
+                        : "p-4 sm:p-6 space-y-4"
                   )}>
                     {/* Title and Rating */}
                     <div className={cn(
                       "flex items-start justify-between",
-                      viewMode === 'list' ? "space-y-2" : "space-y-3"
+                      viewMode === 'list' && isMobile 
+                        ? "mb-1" 
+                        : viewMode === 'list' 
+                          ? "space-y-1 sm:space-y-2" 
+                          : "space-y-3"
                     )}>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <h3 className={cn(
                           "font-serif font-bold text-cream line-clamp-2 group-hover:text-amber-400 transition-colors leading-tight",
-                          viewMode === 'list' ? "text-lg" : "text-xl"
+                          viewMode === 'list' && isMobile 
+                            ? "text-sm line-clamp-1" 
+                            : viewMode === 'list' 
+                              ? "text-base sm:text-lg" 
+                              : "text-xl"
                         )}>
                           {item.name}
                         </h3>
-                        {item.rating && viewMode === 'list' && (
+                        {item.rating && viewMode === 'list' && !isMobile && (
                           <div className="flex items-center gap-2 mt-1">
                             <div className="flex items-center gap-1">
-                              <Star className="w-4 h-4 text-amber-400 fill-current" />
-                              <span className="text-sm text-amber-400 font-medium">{item.rating.toFixed(1)}</span>
+                              <Star className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 fill-current" />
+                              <span className="text-xs sm:text-sm text-amber-400 font-medium">{item.rating.toFixed(1)}</span>
                             </div>
                             {item.reviewCount && (
-                              <span className="text-xs text-cream/60">({item.reviewCount} reviews)</span>
+                              <span className="text-xs text-cream/60 hidden sm:inline">({item.reviewCount} reviews)</span>
                             )}
                           </div>
                         )}
@@ -1054,7 +1044,11 @@ const Menu = () => {
                     {/* Description */}
                     <p className={cn(
                       "text-cream/80 leading-relaxed",
-                      viewMode === 'list' ? "text-sm line-clamp-2" : "text-sm line-clamp-3"
+                      viewMode === 'list' && isMobile 
+                        ? "text-xs line-clamp-1 mt-1" 
+                        : viewMode === 'list' 
+                          ? "text-xs sm:text-sm line-clamp-2 mt-2" 
+                          : "text-sm line-clamp-3"
                     )}>
                       {item.description}
                     </p>
@@ -1080,16 +1074,25 @@ const Menu = () => {
                     )}
 
                     {/* Price and Add Button */}
-                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-cream/10">
+                    <div className={cn(
+                      "flex items-center justify-between mt-auto border-t border-cream/10",
+                      viewMode === 'list' && isMobile 
+                        ? "pt-2 mt-2" 
+                        : "pt-3 sm:pt-4"
+                    )}>
                       <div className="space-y-1">
                         <div className={cn(
                           "font-bold text-amber-400",
-                          viewMode === 'list' ? "text-xl" : "text-2xl"
+                          viewMode === 'list' && isMobile 
+                            ? "text-sm" 
+                            : viewMode === 'list' 
+                              ? "text-lg sm:text-xl" 
+                              : "text-2xl"
                         )}>
-                          ₹{item.price}
+                          {formatPrice(item.price)}
                         </div>
-                        {item.specialOfferText && (
-                          <div className="text-xs text-red-400 font-medium">
+                        {item.specialOfferText && !isMobile && (
+                          <div className="text-xs text-red-400 font-medium hidden sm:block">
                             {item.specialOfferText}
                           </div>
                         )}
@@ -1098,14 +1101,38 @@ const Menu = () => {
                       <motion.div
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
+                        className="flex-shrink-0"
                       >
                         <Button 
-                          onClick={(e) => addToCart(item, e)}
+                          onClick={(e) => handleAddToCart(item, e)}
                           size={viewMode === 'list' ? "sm" : "default"}
-                          className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-semibold shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl border border-amber-400/50"
+                          className={cn(
+                            "bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-semibold shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl border border-amber-400/50 touch-manipulation",
+                            viewMode === 'list' && isMobile 
+                              ? "px-2 py-1 text-xs min-h-[32px] min-w-[60px]" 
+                              : viewMode === 'list' && "px-3 py-2 text-xs sm:text-sm"
+                          )}
                         >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add to Cart
+                          <Plus className={cn(
+                            "mr-1 sm:mr-2", 
+                            viewMode === 'list' && isMobile 
+                              ? "w-3 h-3" 
+                              : viewMode === 'list' 
+                                ? "w-3 h-3 sm:w-4 sm:h-4" 
+                                : "w-4 h-4"
+                          )} />
+                          <span className={cn(
+                            viewMode === 'list' && isMobile 
+                              ? "inline" 
+                              : "hidden sm:inline"
+                          )}>
+                            {viewMode === 'list' && isMobile ? "Add" : "Add to Cart"}
+                          </span>
+                          <span className={cn(
+                            viewMode === 'list' && isMobile 
+                              ? "hidden" 
+                              : "sm:hidden"
+                          )}>Add</span>
                         </Button>
                       </motion.div>
                     </div>
@@ -1113,124 +1140,20 @@ const Menu = () => {
                 </motion.div>
               ))}
             </AnimatePresence>
-          </motion.div>
-        )}
+          </div>
+          )}
+        </div>
       </div>
+
+      {/* Cart Component */}
+      <MenuCart 
+        isOpen={showCart} 
+        onClose={() => setShowCart(false)}
+        onToggle={toggleCart}
+      />
 
       {/* Mobile Safe Area */}
       <div className="h-16 md:h-0"></div>
-
-      {/* Floating Cart Button */}
-      <AnimatePresence>
-        {cart.length > 0 && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-6 right-6 z-50"
-          >
-            <motion.button
-              onClick={() => setShowCart(true)}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="relative bg-gradient-to-r from-amber-600 to-amber-500 text-black p-4 rounded-full shadow-2xl hover:shadow-amber-500/50 transition-all duration-300"
-            >
-              <ShoppingCart className="w-6 h-6" />
-              {getCartItemCount() > 0 && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center"
-                >
-                  {getCartItemCount()}
-                </motion.div>
-              )}
-            </motion.button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Cart Modal */}
-      <Dialog open={showCart} onOpenChange={setShowCart}>
-        <DialogContent className="max-w-md bg-black/95 text-cream border-cream/20">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl font-serif">
-              <ShoppingCart className="w-5 h-5 text-amber-400" />
-              Your Cart ({getCartItemCount()} items)
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="max-h-96 overflow-y-auto space-y-4">
-            {cart.map((item) => (
-              <motion.div
-                key={item.id}
-                layout
-                className="flex items-center gap-4 p-4 bg-cream/5 rounded-xl border border-cream/10"
-              >
-                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-amber-900/30 flex items-center justify-center">
-                      <span className="text-2xl">🍽️</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex-1">
-                  <h4 className="font-semibold text-cream line-clamp-1">{item.name}</h4>
-                  <p className="text-amber-400 font-bold">₹{item.price}</p>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeFromCart(item.id)}
-                    className="text-cream hover:text-amber-400 p-2"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </Button>
-                  <span className="w-8 text-center font-semibold">{item.quantity}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => addToCart(item)}
-                    className="text-cream hover:text-amber-400 p-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => deleteFromCart(item.id)}
-                    className="text-red-400 hover:text-red-300 p-2 ml-2"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-          
-          <div className="border-t border-cream/20 pt-4">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-lg font-semibold">Total:</span>
-              <span className="text-2xl font-bold text-amber-400">₹{calculateTotal()}</span>
-            </div>
-            <Button 
-              onClick={handleProceedToCheckout}
-              className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-semibold"
-            >
-              Proceed to Checkout
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Item Details Modal */}
       <Dialog open={showItemDetails} onOpenChange={setShowItemDetails}>
@@ -1268,7 +1191,7 @@ const Menu = () => {
                   {/* Price and Rating */}
                   <div className="flex items-center justify-between">
                     <div className="text-3xl font-bold text-amber-400">
-                      ₹{selectedItem.price}
+                      {formatPrice(selectedItem.price)}
                     </div>
                     {selectedItem.rating && (
                       <div className="flex items-center gap-2">
@@ -1342,13 +1265,13 @@ const Menu = () => {
                   </Button>
                   <Button
                     onClick={() => {
-                      addToCart(selectedItem);
+                      handleAddToCart(selectedItem);
                       setShowItemDetails(false);
                     }}
                     className="flex-1 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-semibold"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Add to Cart - ₹{selectedItem.price}
+                    Add to Cart - {formatPrice(selectedItem.price)}
                   </Button>
                 </div>
               </div>

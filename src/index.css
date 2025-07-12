@@ -4,6 +4,9 @@
 @import './styles/admin-mobile.css';
 @import './styles/typography.css';
 @import './styles/menu-animations.css';
+@import './styles/mobile-enhancements.css';
+@import './styles/reservation-mobile-fixes.css';
+@import './styles/admin-mobile-responsive.css';
 
 /* Honest Script custom font import */
 @font-face {

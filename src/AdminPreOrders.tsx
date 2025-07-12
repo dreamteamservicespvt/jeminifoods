@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
+import { formatPrice } from "./contexts/CartContext";
 
 // Use your real admin check here if available
 const useAuth = () => {
@@ -235,11 +236,11 @@ const AdminPreOrders = () => {
   // Generate WhatsApp message with detailed order information
   const getWhatsAppLink = (order: PreOrder) => {
     const itemsList = order.items.map(item => 
-      `- ${item.name} (${item.quantity}x) ₹${item.price.toFixed(2)}${item.specialInstructions ? ` - Note: ${item.specialInstructions}` : ''}`
+      `- ${item.name} (${item.quantity}x) ${formatPrice(item.price)}${item.specialInstructions ? ` - Note: ${item.specialInstructions}` : ''}`
     ).join('\n');
     
     const message = encodeURIComponent(
-      `Hello ${order.name},\n\nThis is Jemini Foods. We're contacting you about your pre-order #${order.orderId} for ${order.date} at ${order.time}.\n\nOrder details:\n${itemsList}\n\nTotal: ₹${order.total.toFixed(2)}\n\n${order.specialRequests ? `Special Requests: ${order.specialRequests}\n\n` : ""}Please confirm if everything is correct.\n\nThank you!`
+      `Hello ${order.name},\n\nThis is Jemini Foods. We're contacting you about your pre-order #${order.orderId} for ${order.date} at ${order.time}.\n\nOrder details:\n${itemsList}\n\nTotal: ${formatPrice(order.total)}\n\n${order.specialRequests ? `Special Requests: ${order.specialRequests}\n\n` : ""}Please confirm if everything is correct.\n\nThank you!`
     );
     
     const cleaned = order.phone.replace(/[^\d+]/g, '');
@@ -274,7 +275,7 @@ const AdminPreOrders = () => {
   // Generate email body based on status
   const getEmailBody = (order: PreOrder, status: string) => {
     const items = order.items.map(item => 
-      `- ${item.name} (${item.quantity}x) ₹${item.price.toFixed(2)}`
+      `- ${item.name} (${item.quantity}x) ${formatPrice(item.price)}`
     ).join('\n');
     
     let message = `Hello ${order.name},\n\n`;
@@ -301,7 +302,7 @@ const AdminPreOrders = () => {
     }
     
     message += `Order Details:\n${items}\n\n`;
-    message += `Total: ₹${order.total.toFixed(2)}\n\n`;
+    message += `Total: ${formatPrice(order.total)}\n\n`;
     
     if (order.specialRequests) {
       message += `Special Requests: ${order.specialRequests}\n\n`;
@@ -534,7 +535,7 @@ const AdminPreOrders = () => {
                         {order.items?.length || 0} item(s)
                       </span>
                       <span className="text-amber-400 font-bold">
-                        Total: ₹{order.total?.toFixed(2) || '0.00'}
+                        Total: {formatPrice(order.total || 0)}
                       </span>
                     </div>
                   </div>
@@ -573,7 +574,7 @@ const AdminPreOrders = () => {
                                       )}
                                     </td>
                                     <td className="p-3 text-center text-cream">{item.quantity}</td>
-                                    <td className="p-3 text-right text-cream">₹{item.price.toFixed(2)}</td>
+                                    <td className="p-3 text-right text-cream">{formatPrice(item.price)}</td>
                                     <td className="p-3 text-right text-amber-400">
                                       ₹{(item.price * item.quantity).toFixed(2)}
                                     </td>

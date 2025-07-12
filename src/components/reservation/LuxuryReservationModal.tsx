@@ -4,7 +4,7 @@ import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format } from 'date-fns';
 import confetti from 'canvas-confetti';
-import { Calendar, Clock, Users, Phone, Mail, User, CheckCircle, ChevronRight, ChevronLeft, X, Volume2, Volume, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Users, Phone, User, CheckCircle, ChevronRight, ChevronLeft, X, Volume2, Volume, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -14,7 +14,6 @@ import { AuthRequiredDialog } from '@/components/AuthRequiredDialog';
 
 interface ReservationForm {
   name: string;
-  email: string;
   phone: string;
   date: string;
   time: string;
@@ -285,8 +284,6 @@ const LuxuryReservationModal: React.FC<LuxuryReservationModalProps> = ({ isOpen,
       if (!formData.seatingPreference) errors.seatingPreference = 'Please select seating preference';
     } else if (step === 3) {
       if (!formData.name) errors.name = 'Name is required';
-      if (!formData.email) errors.email = 'Email is required';
-      else if (!/^\S+@\S+\.\S+$/.test(formData.email)) errors.email = 'Please enter a valid email';
       if (!formData.phone) errors.phone = 'Phone number is required';
       else if (!/^[\+]?[1-9][\d]{9,15}$/.test(formData.phone.replace(/\s+/g, ''))) 
         errors.phone = 'Please enter a valid phone number';
@@ -342,7 +339,6 @@ const LuxuryReservationModal: React.FC<LuxuryReservationModalProps> = ({ isOpen,
     try {      // Add to Firestore
       const docRef = await addDoc(collection(db, 'reservations'), {
         name: formData.name?.trim(),
-        email: formData.email?.trim(),
         phone: formData.phone?.trim(),
         date: formData.date,
         time: formData.time,
@@ -787,23 +783,6 @@ const LuxuryReservationModal: React.FC<LuxuryReservationModalProps> = ({ isOpen,
                               <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.name}</p>
                             )}
                           </div>
-
-                          <div className="relative">
-                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                              <Mail size={18} className="text-amber-400/70" />
-                            </div>
-                            <input
-                              type="email"
-                              name="email"
-                              value={formData.email || ''}
-                              onChange={handleInputChange}
-                              className={`w-full bg-black/30 border ${validationErrors.email ? 'border-red-400' : 'border-amber-600/30'} text-cream pl-10 pr-4 py-3 rounded-lg focus:border-amber-400 focus:outline-none transition-colors`}
-                              placeholder="your@email.com"
-                            />
-                            {validationErrors.email && (
-                              <p className="text-red-400 text-sm mt-1 animate-pulse">{validationErrors.email}</p>
-                            )}
-                          </div>
                         </div>
 
                         <div className="relative">
@@ -890,10 +869,6 @@ const LuxuryReservationModal: React.FC<LuxuryReservationModalProps> = ({ isOpen,
                               <div>
                                 <span className="text-cream/70 text-sm">Name</span>
                                 <p className="text-cream">{formData.name}</p>
-                              </div>
-                              <div>
-                                <span className="text-cream/70 text-sm">Email</span>
-                                <p className="text-cream">{formData.email}</p>
                               </div>
                               <div>
                                 <span className="text-cream/70 text-sm">Phone</span>

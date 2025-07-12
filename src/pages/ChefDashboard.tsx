@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
+import { showSuccessToast, showErrorToast } from '@/lib/enhanced-toast-helpers';
 import { OrderTracker } from '@/components/ui/OrderTracker';
 
 interface PreOrder {
@@ -34,6 +35,7 @@ const ChefDashboard = () => {
   const [orders, setOrders] = useState<PreOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Fetch orders assigned to this chef
   useEffect(() => {
@@ -80,17 +82,15 @@ const ChefDashboard = () => {
 
       await updateDoc(doc(db, 'preOrders', orderId), updateData);
       
-      toast({
+      showSuccessToast({
         title: "Order Updated",
-        description: `Order status changed to ${newStatus}`,
-        variant: "default",
+        message: `Order status changed to ${newStatus}`,
       });
     } catch (error) {
       console.error('Error updating order:', error);
-      toast({
+      showErrorToast({
         title: "Error",
-        description: "Failed to update order status",
-        variant: "destructive",
+        message: "Failed to update order status",
       });
     } finally {
       setUpdatingOrderId(null);

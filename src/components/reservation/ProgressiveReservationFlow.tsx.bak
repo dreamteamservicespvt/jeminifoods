@@ -1,0 +1,1118 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
+import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { format, isSameDay, addDays } from 'date-fns';
+import { useForm } from 'react-hook-form';
+import { Link } from 'react-router-dom';
+import confetti from 'canvas-confetti';
+import { 
+  Calendar, Clock, Users, Phone, Mail, User, CheckCircle, 
+  ChevronRight, ChevronLeft, Volume, Volume2, AlertCircle,
+  Table as TableIcon, CalendarCheck, Info, MapPin, MessageSquare, 
+  Calendar as CalendarIcon, Check
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import ParticleEffect from './ParticleEffect';
+import TableSelectionLayout from './TableSelectionLayout';
+import { showReservationToast, showSuccessToast, showErrorToast, showWarningToast, formatReservationDetails, generateWhatsAppLink } from '@/lib/enhanced-toast-helpers';
+import { cn } from '@/lib/utils';
+import { AuthRequiredDialog } from '@/components/AuthRequiredDialog';
+
+// Reservation form interface
+interface ReservationForm {
+  name: string;
+  email: string;
+  phone: string;
+  date: string;
+  time: string;
+  guests: number;
+  specialRequests?: string;
+  seatingPreference: string;
+  occasion?: string;
+  tableId?: string;
+  tableName?: string; // Table name for display
+}
+
+// Component props interface
+interface ProgressiveReservationFlowProps {
+  onReservationComplete?: (reservationId: string, details: Partial<ReservationForm>) => void;
+}
+
+/**
+ * ProgressiveReservationFlow
+ * 
+ * A multi-step reservation form with elegant animations and responsive design.
+ */
+const ProgressiveReservationFlow: React.FC<ProgressiveReservationFlowProps> = ({ 
+  onReservationComplete 
+}) => {
+  // Form state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<ReservationForm>();
+  
+  // Multistep form state
+  const [currentStep, setCurrentStep] = useState(1);
+  const [progress, setProgress] = useState(25);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [hoveredTime, setHoveredTime] = useState<string | null>(null);
+  const [selectedSeating, setSelectedSeating] = useState<string | null>(null);
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [animateError, setAnimateError] = useState(false);
+  
+  // Authentication
+  const { user, isAuthenticated, requireAuth, showAuthDialog, 
+          handleLoginRedirect, handleSignupRedirect, closeAuthDialog } = useAuthGuard();
+  
+  const [reservationDetails, setReservationDetails] = useState<Partial<ReservationForm> | null>(null);
+  const [reservationId, setReservationId] = useState<string>('');
+  const [ambientSound, setAmbientSound] = useState(false);
+  
+  // Animation controls
+  const controls = useAnimation();
+  const confettiCanvasRef = useRef<HTMLCanvasElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  
+  // Effect for progress bar animation
+  useEffect(() => {
+    setProgress(currentStep * 25);
+  }, [currentStep]);
+  
+  // Toggle ambient sound
+  const toggleAmbientSound = () => {
+    if (audioRef.current) {
+      if (ambientSound) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      }
+      setAmbientSound(!ambientSound);
+    }
+  };
+  
+  // Handle date selection
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    setValue('date', format(date, 'yyyy-MM-dd'));
+  };
+  
+  // Handle time selection
+  const handleTimeSelect = (time: string) => {
+    setValue('time', time);
+  };
+  
+  // Handle seating preference selection
+  const handleSeatingSelect = (seating: string) => {
+    setSelectedSeating(seating);
+    setValue('seatingPreference', seating);
+  };
+
+  // Generate available time slots based on selected date and admin configuration
+  const generateTimeSlots = () => {
+    // If today is selected, filter out past times
+    if (selectedDate && isSameDay(selectedDate, new Date())) {
+      const currentHour = new Date().getHours();
+      const currentMinute = new Date().getMinutes();
+      
+      return adminTimeSlots.filter(time => {
+        const [hourStr, minuteStr] = time.split(':');
+        const hour = parseInt(hourStr);
+        const minute = parseInt(minuteStr);
+        
+        // Filter out time slots that have passed
+        if (hour < currentHour || (hour === currentHour && minute <= currentMinute + 30)) {
+          return false;
+        }
+        
+        return true;
+      });
+    }
+    
+    // Return all time slots for future dates
+    return adminTimeSlots;
+  };
+  
+  // Seating options
+  const seatingOptions = [
+    {
+      id: 'indoor',
+      label: 'Indoor Dining',
+      description: 'Elegant setting with ambient lighting and privacy',
+      icon: <TableIcon size={24} />
+    },
+    {
+      id: 'outdoor',
+      label: 'Outdoor Patio',
+      description: 'Fresh air dining with garden views',
+      icon: <MapPin size={24} />
+    },
+    {
+      id: 'bar',
+      label: 'Bar Seating',
+      description: 'Interactive experience with our master mixologists',
+      icon: <MessageSquare size={24} />
+    }
+  ];
+  
+  // Occasion options
+  const occasionOptions = [
+    'Birthday',
+    'Anniversary',
+    'Business Meeting',
+    'Date Night',
+    'Family Gathering',
+    'Special Occasion',
+    'None'
+  ];
+  
+  // Admin-configured time slots (default, would typically come from backend)
+  const [adminTimeSlots] = useState<string[]>([
+    '17:00', '17:30', '18:00', '18:30', '19:00', '19:30',
+    '20:00', '20:30', '21:00', '21:30', '22:00'
+  ]);
+  
+  // Form submission handler
+  const onSubmit = async (data: ReservationForm) => {
+    // Check authentication first
+    if (!requireAuth()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Add to Firestore
+      const docRef = await addDoc(collection(db, 'reservations'), {
+        name: data.name?.trim(),
+        email: data.email?.trim(),
+        phone: data.phone?.trim(),
+        date: data.date,
+        time: data.time,
+        guests: Number(data.guests),
+        specialRequests: data.specialRequests?.trim() || '',
+        seatingPreference: data.seatingPreference,
+        occasion: data.occasion || 'None',
+        tableId: data.tableId || null, // Include selected tableId
+        status: 'pending',
+        createdAt: Timestamp.now(),
+        userId: user?.uid || null // Track user for future reference
+      });
+      
+      // Store reservation details for confirmation page
+      setReservationDetails({
+        name: data.name,
+        date: data.date,
+        time: data.time,
+        guests: data.guests,
+        seatingPreference: data.seatingPreference,
+        tableId: data.tableId,
+      });
+      
+      setReservationId(docRef.id);
+      
+      // Show toast notification
+      showSuccessToast({
+        title: 'Reservation Submitted', 
+        message: 'Your reservation has been received and is awaiting confirmation.'
+      });
+      
+      // Reservation submitted successfully
+      setIsSubmitted(true);
+      reset();
+      
+      // Trigger confetti celebration
+      if (confettiCanvasRef.current) {
+        const myConfetti = confetti.create(confettiCanvasRef.current, {
+          resize: true
+        });
+        
+        myConfetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6, x: 0.5 },
+          colors: ['#f59e0b', '#d97706', '#fbbf24', '#fcd34d']
+        });
+      }
+      
+      // Callback if provided
+      if (onReservationComplete) {
+        onReservationComplete(docRef.id, {
+          name: data.name,
+          date: data.date,
+          time: data.time,
+          guests: data.guests,
+          seatingPreference: data.seatingPreference
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error submitting reservation:', error);
+      showErrorToast({
+        title: 'Submission Failed',
+        message: 'There was an error submitting your reservation. Please try again.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle next step with improved validation
+  const handleNextStep = async () => {
+    // Authentication check before proceeding to contact information step
+    if (currentStep === 2 && !isAuthenticated) {
+      requireAuth();
+      return;
+    }
+    
+    // Validate current step with detailed feedback
+    if (currentStep === 1) {
+      if (!selectedDate) {
+        setAnimateError(true);
+        showWarningToast({
+          title: "Date Required",
+          message: "Please select a reservation date to continue."
+        });
+        setTimeout(() => setAnimateError(false), 500);
+        return;
+      }
+      
+      if (!watch('time')) {
+        setAnimateError(true);
+        showWarningToast({
+          title: "Time Required",
+          message: "Please select a reservation time slot."
+        });
+        setTimeout(() => setAnimateError(false), 500);
+        return;
+      }
+      
+      if (!watch('guests') || watch('guests') < 1) {
+        setAnimateError(true);
+        showWarningToast({
+          title: "Guest Count Required",
+          message: "Please specify how many guests will be dining."
+        });
+        setTimeout(() => setAnimateError(false), 500);
+        return;
+      }
+      
+      // Show loading indicator while checking availability
+      controls.start({
+        scale: [1, 0.98, 1],
+        opacity: [1, 0.8, 1],
+        transition: { duration: 0.4 }
+      });
+      
+      // Proceed to next step with smooth transition
+      setTimeout(() => {
+        setCurrentStep(prev => Math.min(prev + 1, 4));
+      }, 300);
+      
+    } else if (currentStep === 2) {
+      if (!selectedSeating) {
+        setAnimateError(true);
+        showWarningToast({
+          title: "Seating Preference Required",
+          message: "Please select your preferred seating area."
+        });
+        setTimeout(() => setAnimateError(false), 500);
+        return;
+      }
+      
+      if (selectedSeating === 'indoor' && !selectedTableId) {
+        setAnimateError(true);
+        showWarningToast({
+          title: "Table Selection Required",
+          message: "Please select a specific table for your indoor dining experience."
+        });
+        setTimeout(() => setAnimateError(false), 500);
+        return;
+      }
+      
+      // Show elegant transition to next step
+      controls.start({
+        opacity: [1, 0, 1],
+        x: [0, 20, 0],
+        transition: { duration: 0.5 }
+      });
+      
+      setTimeout(() => {
+        setCurrentStep(prev => Math.min(prev + 1, 4));
+      }, 200);
+      
+    } else if (currentStep === 3) {
+      // Validate contact information
+      if (!watch('name')) {
+        setAnimateError(true);
+        showWarningToast({
+          title: "Name Required",
+          message: "Please provide your full name for the reservation."
+        });
+        setTimeout(() => setAnimateError(false), 500);
+        return;
+      }
+      
+      if (!watch('email') || !/^\S+@\S+\.\S+$/.test(watch('email'))) {
+        setAnimateError(true);
+        showWarningToast({
+          title: "Valid Email Required",
+          message: "Please provide a valid email address."
+        });
+        setTimeout(() => setAnimateError(false), 500);
+        return;
+      }
+      
+      if (!watch('phone') || watch('phone').replace(/\D/g, '').length < 10) {
+        setAnimateError(true);
+        showWarningToast({
+          title: "Valid Phone Required",
+          message: "Please provide a valid phone number."
+        });
+        setTimeout(() => setAnimateError(false), 500);
+        return;
+      }
+      
+      // Confirm if the user wants special accommodations
+      controls.start({
+        opacity: [1, 0, 1],
+        scale: [1, 0.98, 1],
+        transition: { duration: 0.5 }
+      });
+      
+      setTimeout(() => {
+        setCurrentStep(prev => Math.min(prev + 1, 4));
+      }, 200);
+      
+    } else {
+      // Final step - form submission
+      // Will be handled by the form submit handler
+      // This is just a fallback
+      handleSubmit(onSubmit)();
+    }
+  };
+  
+  // Handle previous step
+  const handlePrevStep = () => {
+    controls.start({
+      opacity: [1, 0, 1],
+      x: [0, -20, 0],
+      transition: { duration: 0.5 }
+    });
+    
+    setTimeout(() => {
+      setCurrentStep(prev => Math.max(prev - 1, 1));
+    }, 200);
+  };
+  
+  // Generate a calendar grid for the month
+  const generateCalendar = () => {
+    const today = new Date();
+    const calendarDates: Date[] = [];
+    
+    // Generate dates for the next 60 days
+    for (let i = 0; i < 60; i++) {
+      calendarDates.push(addDays(today, i));
+    }
+    
+    return calendarDates;
+  };
+  
+  // Format display date
+  const formatDisplayDate = (date: Date) => {
+    return format(date, 'EEEE, MMMM d, yyyy');
+  };
+  
+  // Calendar grid dates
+  const calendarDates = generateCalendar();
+  
+  // Available time slots based on selected date
+  const timeSlots = generateTimeSlots();
+  
+  // Reset reservation form to initial state
+  const resetReservation = () => {
+    setIsSubmitted(false);
+    setCurrentStep(1);
+    setProgress(25);
+    setSelectedDate(null);
+    setHoveredTime(null);
+    setSelectedSeating(null);
+    setAnimateError(false);
+    setReservationDetails(null);
+    reset(); // Reset the form data
+  };
+
+  // Render the success screen after a successful submission
+  const renderSuccessScreen = () => {
+    const formattedDate = reservationDetails?.date ? 
+      format(new Date(reservationDetails.date), 'EEEE, MMMM d, yyyy') : '';
+    
+    // Generate WhatsApp link for customer communication
+    const whatsAppLink = reservationDetails ? generateWhatsAppLink({
+      id: reservationId,
+      name: reservationDetails.name,
+      date: reservationDetails.date,
+      time: reservationDetails.time,
+      guests: reservationDetails.guests,
+      tableName: reservationDetails.tableName || seatingOptions.find(o => o.id === reservationDetails.seatingPreference)?.label,
+      status: 'pending'
+    }) : '#';
+    
+    return (
+      <div className="flex flex-col items-center justify-center text-center">
+        {/* Canvas for confetti effect */}
+        <canvas 
+          ref={confettiCanvasRef} 
+          className="fixed inset-0 z-20 pointer-events-none"
+        ></canvas>
+        
+        {/* Success Animation */}
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ 
+            type: "spring", 
+            stiffness: 400, 
+            damping: 15 
+          }}
+          className="w-24 h-24 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center mb-8"
+        >
+          <CheckCircle className="h-12 w-12 text-black" />
+        </motion.div>
+        
+        <motion.h2 
+          className="text-3xl md:text-4xl font-serif font-bold text-amber-400 mb-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          Reservation Confirmed!
+        </motion.h2>
+        
+        <motion.p 
+          className="text-lg text-cream mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          Thank you for choosing Jemini Foods. We look forward to serving you.
+        </motion.p>
+        
+        {/* Reservation details card */}
+        <motion.div 
+          className="bg-gradient-to-br from-amber-950/40 to-black/70 border border-amber-600/20 rounded-xl p-6 mb-8 max-w-md w-full"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <h3 className="font-serif text-xl text-amber-300 mb-4 flex items-center gap-2 justify-center">
+            <CalendarCheck className="h-5 w-5" />
+            Reservation Details
+          </h3>
+          
+          <div className="space-y-3 text-left">
+            <div className="flex justify-between">
+              <span className="text-cream/70">Reservation ID:</span>
+              <span className="text-cream font-mono">{reservationId.slice(0, 8)}...</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-cream/70">Date:</span>
+              <span className="text-cream">{formattedDate}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-cream/70">Time:</span>
+              <span className="text-cream">{reservationDetails?.time}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-cream/70">Guests:</span>
+              <span className="text-cream">{reservationDetails?.guests} {Number(reservationDetails?.guests) === 1 ? 'Guest' : 'Guests'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-cream/70">Seating:</span>
+              <span className="text-cream">
+                {seatingOptions.find(opt => opt.id === reservationDetails?.seatingPreference)?.label}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-cream/70">Status:</span>
+              <span className="text-green-400 font-medium">Confirmed</span>
+            </div>
+          </div>
+        </motion.div>
+        
+        {/* Action buttons */}
+        <motion.div 
+          className="space-y-3"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <a 
+            href={whatsAppLink}
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none">
+              <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" 
+                    strokeWidth="1.5" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" />
+            </svg>
+            Contact via WhatsApp
+          </a>
+          
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <Button
+              variant="outline"
+              className="border-amber-600/40 hover:border-amber-500/70 text-amber-400"
+              onClick={() => {
+                // Reset form and go back to step 1
+                setCurrentStep(1);
+                setIsSubmitted(false);
+                setSelectedDate(null);
+                setSelectedSeating(null);
+                setSelectedTableId(null);
+                reset();
+              }}
+            >
+              Book Another Reservation
+            </Button>
+            
+            <Button
+              variant="ghost"
+              className="text-cream/80 hover:text-cream hover:bg-amber-950/30"
+              asChild
+            >
+              <Link to="/dashboard">
+                View My Reservations
+              </Link>
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+  
+  // Return the main component based on submission state
+  return (
+    <div className="relative w-full max-w-4xl mx-auto">
+      {/* Background audio for ambiance */}
+      <audio 
+        ref={audioRef}
+        src="/ambient-restaurant.mp3" 
+        loop
+        preload="metadata"
+      />
+      
+      {/* Sound toggle button */}
+      <button
+        onClick={toggleAmbientSound}
+        className="absolute top-2 right-2 p-2 rounded-full bg-black/20 hover:bg-black/30 transition-colors"
+        aria-label={ambientSound ? "Mute ambient sound" : "Play ambient sound"}
+      >
+        {ambientSound ? <Volume2 size={16} /> : <Volume size={16} className="text-gray-400" />}
+      </button>
+      
+      {/* Auth required dialog */}
+      <AuthRequiredDialog
+        isOpen={showAuthDialog} 
+        onClose={closeAuthDialog}
+        onLogin={handleLoginRedirect}
+        onSignup={handleSignupRedirect}
+      />
+      
+      {/* Progress bar */}
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-1">
+          <h2 className="text-xl font-serif text-amber-300">Reservation</h2>
+          <span className="text-sm text-cream/60">Step {currentStep} of 4</span>
+        </div>
+        <Progress value={progress} className="h-1" />
+      </div>
+      
+      {/* Confetti canvas for success animation */}
+      <canvas 
+        ref={confettiCanvasRef} 
+        className="fixed inset-0 z-20 pointer-events-none hidden"
+      />
+      
+      {/* Main content */}
+      <AnimatePresence mode="wait">
+        {isSubmitted ? (
+          <motion.div
+            key="success"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            {renderSuccessScreen()}
+          </motion.div>
+        ) : (
+          <motion.div
+            key={`step-${currentStep}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className={cn(
+              "bg-gradient-to-b from-black/70 to-zinc-900/80 backdrop-blur-sm",
+              "border border-amber-800/30 rounded-2xl p-6 md:p-8 shadow-xl"
+            )}
+          >
+            {/* Particle effect for visual appeal */}
+            <ParticleEffect />
+            
+            <form onSubmit={handleSubmit(onSubmit)}>
+              {currentStep === 1 && (
+                <div className="space-y-8">
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-serif text-amber-400 mb-2">Select Date & Time</h3>
+                    <p className="text-cream/70">When would you like to dine with us?</p>
+                  </div>
+                  
+                  {/* Date selection */}
+                  <div className="space-y-4">
+                    <label className="block text-sm font-medium text-cream">
+                      <CalendarIcon className="inline-block mr-2 h-4 w-4" />
+                      Select a Date
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                      {calendarDates.slice(0, 15).map((date, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => handleDateSelect(date)}
+                          className={cn(
+                            "py-3 px-2 rounded-xl text-center transition-all",
+                            selectedDate && isSameDay(date, selectedDate)
+                              ? "bg-amber-600 text-white shadow-md scale-105"
+                              : "bg-black/30 hover:bg-black/40 text-cream/90 border border-amber-800/30"
+                          )}
+                        >
+                          <div className="text-xs">{format(date, 'MMM')}</div>
+                          <div className="text-xl font-bold">{format(date, 'd')}</div>
+                          <div className="text-xs">{format(date, 'EEE')}</div>
+                        </button>
+                      ))}
+                    </div>
+                    {selectedDate && (
+                      <p className="text-sm text-amber-300 text-center mt-2">
+                        {formatDisplayDate(selectedDate)}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Time selection - visible only when date is selected */}
+                  {selectedDate && (
+                    <div className="space-y-4">
+                      <label className="block text-sm font-medium text-cream">
+                        <Clock className="inline-block mr-2 h-4 w-4" />
+                        Select a Time
+                      </label>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                        {timeSlots.map((time, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => handleTimeSelect(time)}
+                            onMouseEnter={() => setHoveredTime(time)}
+                            onMouseLeave={() => setHoveredTime(null)}
+                            className={cn(
+                              "py-3 px-2 rounded-xl text-center transition-all",
+                              watch('time') === time
+                                ? "bg-amber-600 text-white shadow-md"
+                                : "bg-black/30 hover:bg-black/40 text-cream/90 border border-amber-800/30"
+                            )}
+                          >
+                            {time}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Party size selection */}
+                  <div className="space-y-4">
+                    <label className="block text-sm font-medium text-cream">
+                      <Users className="inline-block mr-2 h-4 w-4" />
+                      Number of Guests
+                    </label>
+                    <div className="grid grid-cols-5 gap-2">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setValue('guests', num)}
+                          className={cn(
+                            "py-3 px-3 rounded-xl text-center transition-all",
+                            Number(watch('guests')) === num
+                              ? "bg-amber-600 text-white shadow-md"
+                              : "bg-black/30 hover:bg-black/40 text-cream/90 border border-amber-800/30"
+                          )}
+                        >
+                          {num}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {currentStep === 2 && (
+                <div className="space-y-8">
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-serif text-amber-400 mb-2">Choose Your Seating</h3>
+                    <p className="text-cream/70">Select your preferred dining area</p>
+                  </div>
+                  
+                  {/* Seating preferences */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {seatingOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => handleSeatingSelect(option.id)}
+                        className={cn(
+                          "p-4 rounded-xl text-center transition-all flex flex-col items-center",
+                          selectedSeating === option.id
+                            ? "bg-amber-900/70 border-2 border-amber-500 shadow-md"
+                            : "bg-black/30 hover:bg-black/40 border border-amber-800/30"
+                        )}
+                      >
+                        <div className="p-3 rounded-full bg-amber-800/30 mb-3">
+                          {option.icon}
+                        </div>
+                        <h4 className="text-lg font-medium text-amber-300">{option.label}</h4>
+                        <p className="text-sm text-cream/70 mt-1">{option.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Table selection layout for indoor seating */}
+                  {selectedSeating === 'indoor' && (
+                    <div className="mt-8 space-y-4">
+                      <h4 className="text-lg font-medium text-amber-300">Select Your Table</h4>
+                      <TableSelectionLayout 
+                        partySize={Number(watch('guests'))} 
+                        onTableSelect={(tableId, name) => {
+                          setSelectedTableId(tableId);
+                          setValue('tableId', tableId);
+                          setValue('tableName', name);
+                        }}
+                        selectedTableId={selectedTableId}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Special occasion select */}
+                  <div className="space-y-4 mt-8">
+                    <label htmlFor="occasion" className="block text-sm font-medium text-cream">
+                      Is this for a special occasion?
+                    </label>
+                    <select
+                      id="occasion"
+                      {...register('occasion')}
+                      className="w-full py-3 px-4 rounded-xl border border-amber-800/30 
+                               bg-black/30 text-cream focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    >
+                      <option value="">Select Occasion (Optional)</option>
+                      {occasionOptions.map((occasion) => (
+                        <option key={occasion} value={occasion}>
+                          {occasion}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* Special requests */}
+                  <div className="space-y-4">
+                    <label htmlFor="specialRequests" className="block text-sm font-medium text-cream">
+                      Special Requests (Optional)
+                    </label>
+                    <textarea
+                      id="specialRequests"
+                      {...register('specialRequests')}
+                      rows={3}
+                      placeholder="Please let us know if you have any special requests..."
+                      className="w-full py-3 px-4 rounded-xl border border-amber-800/30 
+                               bg-black/30 text-cream resize-none focus:outline-none 
+                               focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {currentStep === 3 && (
+                <div className="space-y-8">
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-serif text-amber-400 mb-2">Your Contact Details</h3>
+                    <p className="text-cream/70">How can we reach you regarding your reservation?</p>
+                  </div>
+                  
+                  {/* Full name */}
+                  <div className="space-y-2">
+                    <label htmlFor="name" className="block text-sm font-medium text-cream">
+                      <User className="inline-block mr-2 h-4 w-4" />
+                      Full Name <span className="text-amber-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      {...register('name', { required: true })}
+                      placeholder="Enter your full name"
+                      className={cn(
+                        "w-full py-3 px-4 rounded-xl border bg-black/30 text-cream",
+                        "focus:outline-none focus:ring-2 focus:ring-amber-500",
+                        errors.name ? "border-red-500" : "border-amber-800/30"
+                      )}
+                    />
+                    {errors.name && (
+                      <p className="text-red-500 text-sm">Please enter your full name</p>
+                    )}
+                  </div>
+                  
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="block text-sm font-medium text-cream">
+                      <Mail className="inline-block mr-2 h-4 w-4" />
+                      Email Address <span className="text-amber-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      {...register('email', { 
+                        required: true,
+                        pattern: /^\S+@\S+\.\S+$/
+                      })}
+                      placeholder="Enter your email address"
+                      className={cn(
+                        "w-full py-3 px-4 rounded-xl border bg-black/30 text-cream",
+                        "focus:outline-none focus:ring-2 focus:ring-amber-500",
+                        errors.email ? "border-red-500" : "border-amber-800/30"
+                      )}
+                    />
+                    {errors.email && (
+                      <p className="text-red-500 text-sm">Please enter a valid email address</p>
+                    )}
+                  </div>
+                  
+                  {/* Phone */}
+                  <div className="space-y-2">
+                    <label htmlFor="phone" className="block text-sm font-medium text-cream">
+                      <Phone className="inline-block mr-2 h-4 w-4" />
+                      Phone Number <span className="text-amber-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      id="phone"
+                      {...register('phone', { 
+                        required: true,
+                        minLength: 10
+                      })}
+                      placeholder="Enter your phone number"
+                      className={cn(
+                        "w-full py-3 px-4 rounded-xl border bg-black/30 text-cream",
+                        "focus:outline-none focus:ring-2 focus:ring-amber-500",
+                        errors.phone ? "border-red-500" : "border-amber-800/30"
+                      )}
+                    />
+                    {errors.phone && (
+                      <p className="text-red-500 text-sm">Please enter a valid phone number</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {currentStep === 4 && (
+                <div className="space-y-8">
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-serif text-amber-400 mb-2">Review & Confirm</h3>
+                    <p className="text-cream/70">Please review your reservation details</p>
+                  </div>
+                  
+                  {/* Summary card */}
+                  <div className="bg-black/40 border border-amber-800/30 rounded-xl p-6">
+                    <div className="space-y-4">
+                      {/* Date & Time */}
+                      <div className="flex items-start">
+                        <CalendarCheck className="h-5 w-5 text-amber-500 mr-3 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-amber-300">Date & Time</h4>
+                          <p className="text-cream">
+                            {selectedDate && formatDisplayDate(selectedDate)}
+                            {watch('time') && ` at ${watch('time')}`}
+                          </p>
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setCurrentStep(1)}
+                            className="mt-1 h-8 text-amber-400 hover:text-amber-300 hover:bg-amber-950/30 p-0"
+                          >
+                            Edit
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Party Size */}
+                      <div className="flex items-start">
+                        <Users className="h-5 w-5 text-amber-500 mr-3 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-amber-300">Party Size</h4>
+                          <p className="text-cream">
+                            {watch('guests')} {Number(watch('guests')) === 1 ? 'Guest' : 'Guests'}
+                          </p>
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setCurrentStep(1)}
+                            className="mt-1 h-8 text-amber-400 hover:text-amber-300 hover:bg-amber-950/30 p-0"
+                          >
+                            Edit
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Seating */}
+                      <div className="flex items-start">
+                        <TableIcon className="h-5 w-5 text-amber-500 mr-3 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-amber-300">Seating Preference</h4>
+                          <p className="text-cream">
+                            {seatingOptions.find(opt => opt.id === selectedSeating)?.label}
+                            {watch('tableId') && ` (Table: ${watch('tableName')})`}
+                          </p>
+                          {watch('occasion') && watch('occasion') !== 'None' && (
+                            <p className="text-cream/80 text-sm">
+                              Special Occasion: {watch('occasion')}
+                            </p>
+                          )}
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setCurrentStep(2)}
+                            className="mt-1 h-8 text-amber-400 hover:text-amber-300 hover:bg-amber-950/30 p-0"
+                          >
+                            Edit
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Contact Info */}
+                      <div className="flex items-start">
+                        <User className="h-5 w-5 text-amber-500 mr-3 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-amber-300">Contact Information</h4>
+                          <p className="text-cream">{watch('name')}</p>
+                          <p className="text-cream/80 text-sm">{watch('email')}</p>
+                          <p className="text-cream/80 text-sm">{watch('phone')}</p>
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setCurrentStep(3)}
+                            className="mt-1 h-8 text-amber-400 hover:text-amber-300 hover:bg-amber-950/30 p-0"
+                          >
+                            Edit
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Special Requests (if any) */}
+                      {watch('specialRequests') && (
+                        <div className="flex items-start">
+                          <Info className="h-5 w-5 text-amber-500 mr-3 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-amber-300">Special Requests</h4>
+                            <p className="text-cream/80 text-sm italic">"{watch('specialRequests')}"</p>
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => setCurrentStep(2)}
+                              className="mt-1 h-8 text-amber-400 hover:text-amber-300 hover:bg-amber-950/30 p-0"
+                            >
+                              Edit
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Final submission notice */}
+                  <div className="bg-amber-900/20 border border-amber-600/20 rounded-xl p-4 flex gap-3">
+                    <AlertCircle className="h-5 w-5 text-amber-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-cream">
+                      By confirming your reservation, you agree to our cancellation policy. 
+                      We'll hold your table for 15 minutes from the reservation time.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Navigation buttons */}
+              <div className="flex justify-between mt-10">
+                {currentStep > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handlePrevStep}
+                    className="border-amber-800/30 text-amber-400 hover:border-amber-800/60"
+                  >
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    Back
+                  </Button>
+                )}
+                
+                {currentStep < 4 ? (
+                  <Button
+                    type="button"
+                    onClick={handleNextStep}
+                    className={cn(
+                      "bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600",
+                      "transition-all duration-300 ml-auto",
+                      animateError && "animate-shake"
+                    )}
+                  >
+                    Continue
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={cn(
+                      "bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600",
+                      "transition-all duration-300 ml-auto",
+                      isSubmitting && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    {isSubmitting ? (
+                      <>Processing...</>
+                    ) : (
+                      <>
+                        Confirm Reservation
+                        <Check className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default ProgressiveReservationFlow;

@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { addDoc, collection, query, where, getDocs, Timestamp, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { 
-  Calendar, Clock, Users, Phone, Mail, User, CheckCircle, MapPin, MoonStar, 
+  Calendar, Clock, Users, Phone, User, CheckCircle, MapPin, MoonStar, 
   ChevronRight, ChevronLeft, Calendar as CalendarIcon, X, Volume, Volume2,
   Info, Table as TableIcon, AlertTriangle, MessageSquare, AlertCircle, 
   Shield, ShieldCheck, Bookmark, CalendarCheck, CalendarX
@@ -24,7 +25,6 @@ import { DiningTable, TableType, TableLocation, TableAvailability } from '@/type
 
 interface ReservationForm {
   name: string;
-  email: string;
   phone: string;
   date: string;
   time: string;
@@ -60,8 +60,34 @@ const Reservations = () => {  // Form state
   const confettiCanvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   
+  // Render a banner for the new reservation experience
+  const renderNewExperienceBanner = () => {
+    return (
+      <div className="bg-gradient-to-r from-amber-900/30 to-amber-950/40 backdrop-blur-sm border border-amber-600/30 rounded-xl p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <h3 className="text-xl font-serif font-medium text-amber-400 mb-1">
+            Try Our New Reservation Experience
+          </h3>
+          <p className="text-cream/80">
+            Experience our elegant new booking system with enhanced features and dark mode.
+          </p>
+        </div>
+        <Link to="/new-reservations" className="whitespace-nowrap">
+          <Button 
+            variant="default"
+            className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black"
+          >
+            Try New Experience
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
+    );
+  };
+  
   // Effect for progress bar animation
   useEffect(() => {
+    // Set progress based on current step
     setProgress(currentStep * 25);
   }, [currentStep]);
   
@@ -294,7 +320,6 @@ const Reservations = () => {  // Form state
         // Add to Firestore
       const docRef = await addDoc(collection(db, 'reservations'), {
         name: data.name.trim(),
-        email: data.email.trim(),
         phone: data.phone.trim(),
         date: data.date,
         time: data.time,
@@ -471,10 +496,17 @@ const Reservations = () => {  // Form state
         </div>
       </div>
     );
-  };  return (
+  };
+  
+  return (
     <div className="min-h-screen bg-charcoal">
       <div className="overflow-x-hidden">
         <AmbianceImages />
+        
+      {/* New Experience Banner */}
+      <div className="max-w-7xl mx-auto pt-6 px-4 sm:px-6 lg:px-8">
+        {renderNewExperienceBanner()}
+      </div>
       
       {/* Background ambient audio */}
       <audio ref={audioRef} src="/ambient-restaurant.mp3" loop />
@@ -521,10 +553,16 @@ const Reservations = () => {  // Form state
               Reserve Your Table
             </h1>
             <div className="w-32 h-0.5 bg-amber-400/70 mx-auto mb-6"></div>
-            <p className="text-xl text-cream/90 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-cream/90 max-w-3xl mx-auto leading-relaxed mb-8">
               Secure your place for an unforgettable culinary journey.
               Let us prepare the perfect setting for your dining experience.
             </p>
+            
+            <Link to="/new-reservations">
+              <Button className="bg-amber-600 hover:bg-amber-700 text-black font-semibold px-6 py-3 rounded-md">
+                Try Our New Reservation Experience
+              </Button>
+            </Link>
           </motion.div>
         </div>
       </div>
@@ -1042,27 +1080,6 @@ const Reservations = () => {  // Form state
                               <p className="text-red-400 text-sm mt-1">{errors.name.message}</p>
                             )}
                           </div>
-
-                          <div className="relative">
-                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                              <Mail size={18} className="text-amber-400/70" />
-                            </div>
-                            <input
-                              {...register('email', { 
-                                required: 'Email is required',
-                                pattern: {
-                                  value: /^\S+@\S+\.\S+$/,
-                                  message: 'Please enter a valid email address'
-                                }
-                              })}
-                              type="email"
-                              className="w-full bg-black/30 border border-amber-600/30 text-cream pl-10 pr-4 py-3 rounded-lg focus:border-amber-400 focus:outline-none transition-colors"
-                              placeholder="your@email.com"
-                            />
-                            {errors.email && (
-                              <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>
-                            )}
-                          </div>
                         </div>
 
                         <div className="relative">
@@ -1156,10 +1173,6 @@ const Reservations = () => {  // Form state
                               <div>
                                 <span className="text-cream/70 text-sm">Name</span>
                                 <p className="text-cream">{watch('name')}</p>
-                              </div>
-                              <div>
-                                <span className="text-cream/70 text-sm">Email</span>
-                                <p className="text-cream">{watch('email')}</p>
                               </div>
                               <div>
                                 <span className="text-cream/70 text-sm">Phone</span>

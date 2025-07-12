@@ -67,3 +67,54 @@
     /* ...other existing variables... */
   }
 }
+
+/* Toast Animations and Effects */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 5px 0px var(--glow-color); }
+  50% { box-shadow: 0 0 8px 2px var(--glow-color); }
+  100% { box-shadow: 0 0 5px 0px var(--glow-color); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.glow-yellow {
+  --glow-color: rgba(234, 179, 8, 0.2);
+  animation: pulse-glow 3s infinite;
+}
+
+.glow-red {
+  --glow-color: rgba(239, 68, 68, 0.2);
+  animation: pulse-glow 3s infinite;
+}
+
+.glow-green {
+  --glow-color: rgba(34, 197, 94, 0.2);
+  animation: pulse-glow 3s infinite;
+}
+
+.glow-blue {
+  --glow-color: rgba(59, 130, 246, 0.2);
+  animation: pulse-glow 3s infinite;
+}
+
+/* Add responsive toast support for swipe actions on mobile */
+@media (max-width: 640px) {
+  [data-swipe=move] {
+    transition: transform 0.2s ease-out;
+  }
+  
+  [data-swipe=cancel] {
+    transition: transform 0.2s ease-out;
+  }
+  
+  [data-swipe=end] {
+    transition: transform 0.2s ease-out;
+  }
+}

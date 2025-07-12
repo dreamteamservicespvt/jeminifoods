@@ -3,7 +3,11 @@ import {
   addDoc, 
   serverTimestamp, 
   doc, 
-  updateDoc 
+  updateDoc,
+  getDoc,
+  query,
+  where,
+  getDocs
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -34,6 +38,17 @@ export interface WhatsAppTemplate {
   name: string;
   template: string;
   requiredParams: string[];
+}
+
+export interface FirestoreWhatsAppTemplate {
+  id?: string;
+  name: string;
+  template: string;
+  type: WhatsAppMessageType;
+  isActive: boolean;
+  requiredParams: string[];
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 // WhatsApp Message Templates
@@ -360,8 +375,219 @@ class WhatsAppService {
   }
 }
 
+// Enhanced WhatsApp Service Methods
+export interface ReservationData {
+  id: string;
+  name: string;
+  phone: string;
+  date: string;
+  time: string;
+  guests: number;
+  specialRequests?: string;
+  status: string;
+}
+
+/**
+ * Enhanced WhatsApp Service Class
+ */
+class EnhancedWhatsAppService extends WhatsAppService {
+  /**
+   * Get all active WhatsApp templates from Firestore
+   */
+  async getTemplates(): Promise<FirestoreWhatsAppTemplate[]> {
+    try {
+      const templatesQuery = query(
+        collection(db, 'whatsapp_templates'),
+        where('isActive', '==', true)
+      );
+      const snapshot = await getDocs(templatesQuery);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as FirestoreWhatsAppTemplate));
+    } catch (error) {
+      console.error('Error fetching WhatsApp templates:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get a specific template by ID from Firestore
+   */
+  async getTemplateById(templateId: string): Promise<FirestoreWhatsAppTemplate | null> {
+    try {
+      const templateDoc = await getDoc(doc(db, 'whatsapp_templates', templateId));
+      if (templateDoc.exists()) {
+        return {
+          id: templateDoc.id,
+          ...templateDoc.data()
+        } as FirestoreWhatsAppTemplate;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching WhatsApp template:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Replace placeholders in a message template
+   */
+  replacePlaceholders(template: string, data: ReservationData): string {
+    let message = template;
+    
+    // Replace common placeholders
+    message = message.replace(/{name}/g, data.name || '');
+    message = message.replace(/{phone}/g, data.phone || '');
+    message = message.replace(/{date}/g, data.date || '');
+    message = message.replace(/{time}/g, data.time || '');
+    message = message.replace(/{guests}/g, data.guests?.toString() || '');
+    message = message.replace(/{specialRequests}/g, data.specialRequests || '');
+    message = message.replace(/{status}/g, data.status || '');
+    message = message.replace(/{reservationId}/g, data.id || '');
+    
+    // Replace current date and business info
+    message = message.replace(/{currentDate}/g, new Date().toLocaleDateString());
+    message = message.replace(/{businessName}/g, 'Jemini Foods');
+    message = message.replace(/{businessPhone}/g, '+1-555-JEMINI');
+    
+    return message;
+  }
+
+  /**
+   * Generate WhatsApp link for sending messages
+   */
+  generateWhatsAppLink(phone: string, message: string): string {
+    // Clean phone number (remove non-digits)
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Encode message for URL
+    const encodedMessage = encodeURIComponent(message);
+    
+    // Generate WhatsApp Web/App link
+    return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+  }
+
+  /**
+   * Send a WhatsApp message using a template
+   */
+  async sendTemplateMessage(
+    reservationData: ReservationData,
+    templateId: string,
+    adminUserId: string
+  ): Promise<{ success: boolean; link?: string; error?: string }> {
+    try {
+      const template = await this.getTemplateById(templateId);
+      if (!template) {
+        return { success: false, error: 'Template not found' };
+      }
+
+      const message = this.replacePlaceholders(template.template, reservationData);
+      const whatsappLink = this.generateWhatsAppLink(reservationData.phone, message);
+
+      // Log the message attempt
+      await this.logMessage({
+        reservationId: reservationData.id,
+        phone: reservationData.phone,
+        message,
+        templateId,
+        status: 'pending',
+        createdAt: new Date(),
+        sentBy: adminUserId
+      });
+
+      // Open WhatsApp link
+      window.open(whatsappLink, '_blank');
+
+      return { success: true, link: whatsappLink };
+    } catch (error) {
+      console.error('Error sending template message:', error);
+      return { success: false, error: 'Failed to send message' };
+    }
+  }
+
+  /**
+   * Send a custom WhatsApp message
+   */
+  async sendCustomMessage(
+    phone: string,
+    message: string,
+    adminUserId: string,
+    reservationId?: string
+  ): Promise<{ success: boolean; link?: string; error?: string }> {
+    try {
+      const whatsappLink = this.generateWhatsAppLink(phone, message);
+
+      // Log the message attempt
+      await this.logMessage({
+        reservationId,
+        phone,
+        message,
+        status: 'pending',
+        createdAt: new Date(),
+        sentBy: adminUserId
+      });
+
+      // Open WhatsApp link
+      window.open(whatsappLink, '_blank');
+
+      return { success: true, link: whatsappLink };
+    } catch (error) {
+      console.error('Error sending custom message:', error);
+      return { success: false, error: 'Failed to send message' };
+    }
+  }
+
+  /**
+   * Log WhatsApp message to Firestore
+   */
+  private async logMessage(messageData: any): Promise<void> {
+    try {
+      await addDoc(collection(db, 'whatsapp_messages'), {
+        ...messageData,
+        timestamp: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Error logging WhatsApp message:', error);
+    }
+  }
+
+  /**
+   * Quick message generators for common scenarios
+   */
+  generateQuickMessage(type: 'greeting' | 'thanks' | 'followup', name?: string): string {
+    const messages = {
+      greeting: `Hi${name ? ` ${name}` : ''}! 👋
+
+Thank you for your interest in Jemini Foods! We're here to help you with your reservation.
+
+How can we assist you today?`,
+      
+      thanks: `Thank you${name ? ` ${name}` : ''}! 🙏
+
+We appreciate your business and look forward to providing you with an exceptional dining experience.
+
+If you have any questions, please don't hesitate to reach out!`,
+      
+      followup: `Hi${name ? ` ${name}` : ''}! 
+
+We wanted to follow up on your recent inquiry about dining with us at Jemini Foods.
+
+Are you still interested in making a reservation? We'd be happy to help!
+
+Please let us know how we can assist you. 😊`
+    };
+
+    return messages[type];
+  }
+}
+
 // Export singleton instance
 export const whatsappService = new WhatsAppService();
+
+// Export enhanced instance
+export const enhancedWhatsAppService = new EnhancedWhatsAppService();
+export { EnhancedWhatsAppService };
 
 // Helper functions for common use cases
 export const sendReservationConfirmation = async (

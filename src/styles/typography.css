@@ -46,10 +46,10 @@
 
 /* Menu item styling */
 .menu-item-title {
-  font-family: 'Honest Script', serif;
-  font-weight: normal;
-  letter-spacing: 0;
-  line-height: 1.3;
+  font-family: 'Playfair Display', serif;
+  font-weight: 600;
+  color: #f7f1e3;
+  transition: color 0.3s ease;
 }
 
 .menu-item-description {
@@ -86,4 +86,32 @@
   font-family: 'Honest Script', serif;
   letter-spacing: 0;
   font-weight: normal;
+}
+
+/* Split-pane cart layout styling */
+.menu-split-layout {
+  display: flex;
+  width: 100%;
+  min-height: calc(100vh - 200px);
+  position: relative;
+}
+
+.menu-content {
+  flex: 1;
+  transition: padding-right 0.3s ease;
+}
+
+.menu-cart-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  z-index: 40;
+  transition: transform 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .menu-split-layout {
+    display: block;
+  }
 }

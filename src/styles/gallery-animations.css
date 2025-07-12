@@ -291,3 +291,45 @@
     transform: translateY(-4px) scale(1.01);
   }
 }
+
+/* Cart drawer animations for mobile */
+.cart-drawer-enter {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.cart-drawer-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 250ms, transform 250ms;
+}
+
+.cart-drawer-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.cart-drawer-exit-active {
+  opacity: 0;
+  transform: translateX(100%);
+  transition: opacity 250ms, transform 250ms;
+}
+
+/* Cart backdrop animation */
+.cart-backdrop-enter {
+  opacity: 0;
+}
+
+.cart-backdrop-enter-active {
+  opacity: 1;
+  transition: opacity 200ms;
+}
+
+.cart-backdrop-exit {
+  opacity: 1;
+}
+
+.cart-backdrop-exit-active {
+  opacity: 0;
+  transition: opacity 200ms;
+}

@@ -113,10 +113,10 @@ const MobileMenuHeader: React.FC<MobileMenuHeaderProps> = ({
                 onClick={() => handleCategoryChange(category)}
                 whileTap={{ scale: 0.95 }}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 border",
+                  "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 border touch-manipulation min-h-[40px]",
                   selectedCategory === category
                     ? "bg-amber-500 text-black border-amber-400 shadow-lg"
-                    : "bg-black/30 backdrop-blur-sm text-cream border-cream/20"
+                    : "bg-black/30 backdrop-blur-sm text-cream border-cream/20 hover:bg-amber-400/10 hover:border-amber-400/40"
                 )}
               >
                 <categoryInfo.icon className="w-4 h-4" />
@@ -137,10 +137,10 @@ const MobileMenuHeader: React.FC<MobileMenuHeaderProps> = ({
           variant="outline"
           onClick={() => setShowFilters(!showFilters)}
           className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 border",
+            "flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 border touch-manipulation",
             showFilters
-              ? "bg-amber-500 text-black border-amber-400"
-              : "bg-black/30 backdrop-blur-sm text-cream border-cream/20"
+              ? "bg-amber-500 text-black border-amber-400 shadow-lg"
+              : "bg-black/30 backdrop-blur-sm text-cream border-cream/20 hover:bg-amber-400/10 hover:border-amber-400/40"
           )}
         >
           <Filter className="w-4 h-4" />
@@ -163,10 +163,10 @@ const MobileMenuHeader: React.FC<MobileMenuHeaderProps> = ({
             size="sm"
             onClick={() => setViewMode('grid')}
             className={cn(
-              "p-2 rounded-lg transition-all",
+              "p-2 rounded-lg transition-all touch-manipulation",
               viewMode === 'grid'
-                ? "bg-amber-500 text-black"
-                : "text-cream hover:text-amber-400"
+                ? "bg-amber-500 text-black shadow-lg"
+                : "text-cream hover:text-amber-400 hover:bg-amber-400/10"
             )}
           >
             <Grid className="w-4 h-4" />
@@ -176,10 +176,10 @@ const MobileMenuHeader: React.FC<MobileMenuHeaderProps> = ({
             size="sm"
             onClick={() => setViewMode('list')}
             className={cn(
-              "p-2 rounded-lg transition-all",
+              "p-2 rounded-lg transition-all touch-manipulation",
               viewMode === 'list'
-                ? "bg-amber-500 text-black"
-                : "text-cream hover:text-amber-400"
+                ? "bg-amber-500 text-black shadow-lg"
+                : "text-cream hover:text-amber-400 hover:bg-amber-400/10"
             )}
           >
             <List className="w-4 h-4" />
@@ -210,10 +210,10 @@ const MobileMenuHeader: React.FC<MobileMenuHeaderProps> = ({
                       onClick={() => handleDietaryChange(dietary)}
                       whileTap={{ scale: 0.95 }}
                       className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium transition-all duration-300 border",
+                        "flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium transition-all duration-300 border touch-manipulation min-h-[36px]",
                         isSelected
                           ? `${tagInfo.bgColor} ${tagInfo.textColor} border-current shadow-lg`
-                          : "bg-black/30 backdrop-blur-sm text-cream border-cream/20 hover:border-cream/40"
+                          : "bg-black/30 backdrop-blur-sm text-cream border-cream/20 hover:border-cream/40 hover:bg-cream/5"
                       )}
                     >
                       <tagInfo.icon className="w-3 h-3" />

@@ -16,7 +16,6 @@ export const useAdminNotifications = () => {
     reservationData: {
       id: string;
       userName: string;
-      userEmail: string;
       userPhone: string;
       date: string;
       time: string;
@@ -192,8 +191,8 @@ export const useChefNotifications = () => {
             orderId: orderData.orderId,
             status: orderData.status,
             statusMessage,
-            pickupDate: orderData.pickupDate,
-            pickupTime: orderData.pickupTime,
+            date: orderData.pickupDate,
+            time: orderData.pickupTime,
             trackingUrl: `${window.location.origin}/dashboard?tab=preOrders`
           }
         );

@@ -27,7 +27,6 @@ export interface PreOrder {
   estimatedReadyTime?: string;
   orderId?: string;
   name?: string;
-  email?: string;
   phone?: string;
   specialRequests?: string;
   paymentStatus?: 'pending' | 'completed';

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, PanInfo } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ChevronDown, Star, Award, Users, Clock } from 'lucide-react';
+import { CarouselIndicators } from './ui/carousel-indicators';
 
 const Hero = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -34,6 +35,18 @@ const Hero = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // Handle swipe gestures
+  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const threshold = 50;
+    if (info.offset.x > threshold) {
+      // Swipe right - previous slide
+      setCurrentSlide((prev) => (prev - 1 + heroImages.length) % heroImages.length);
+    } else if (info.offset.x < -threshold) {
+      // Swipe left - next slide
+      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+    }
+  };
+
   const stats = [
     { icon: Star, value: "5★", label: "Michelin Guide" },
     { icon: Award, value: "15+", label: "Awards Won" },
@@ -43,10 +56,14 @@ const Hero = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Background Images with Parallax */}
+      {/* Background Images with Parallax and Swipe Support */}
       <motion.div 
         style={{ y }}
-        className="absolute inset-0 w-full h-[120%]"
+        className="absolute inset-0 w-full h-[120%] cursor-grab active:cursor-grabbing"
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.1}
+        onDragEnd={handleDragEnd}
       >
         {heroImages.map((image, index) => (
           <motion.div
@@ -182,21 +199,31 @@ const Hero = () => {
         </motion.div>
       </motion.div>
 
-      {/* Slide Indicators */}
+      {/* Elegant Slide Indicators */}
       <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-20">
-        <div className="flex space-x-3">
-          {heroImages.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                currentSlide === index 
-                  ? 'bg-amber-400 scale-125' 
-                  : 'bg-white/30 hover:bg-white/50'
-              }`}
-            />
-          ))}
-        </div>
+        <CarouselIndicators
+          total={heroImages.length}
+          current={currentSlide}
+          onSelect={setCurrentSlide}
+          variant="elegant"
+          showProgress={true}
+          autoPlayDuration={6000}
+          size="md"
+          className="mb-4"
+        />
+        
+        {/* Slide info */}
+        <motion.div
+          className="text-center"
+          key={currentSlide}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <p className="text-cream/80 text-sm font-light">
+            {heroImages[currentSlide].subtitle}
+          </p>
+        </motion.div>
       </div>
     </div>
   );
